@@ -1,0 +1,19 @@
+# This is a Declarative Automation Bundle definition for tennis-player-development-platform.
+# The Databricks extension requires databricks.yml configuration file.
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+
+bundle:
+  name: tennis-player-development-platform
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-66b56d97-276e.cloud.databricks.com
+
+  ## Optionally, there could be 'staging' or 'prod' targets here.
+  #
+  # prod:
+  #   workspace:
+  #     host: https://dbc-66b56d97-276e.cloud.databricks.com
