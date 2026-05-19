@@ -4,10 +4,11 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
-ignore = ["E501"]
+ignore = ["E501", "F403", "F405"]
 
 exclude = [
     ".venv",
+    "typings/",
     "tennis_analytics/target",
     "tennis_analytics/dbt_packages",
 ]

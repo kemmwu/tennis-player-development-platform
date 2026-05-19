@@ -14,3 +14,4 @@ catalogs = client.catalogs.list()
 print("Catalogs in your workspace:")
 for c in catalogs:
     print(f"  - {c.name}")
+
