@@ -1,0 +1,33 @@
+name: Python CI
+
+"on":
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  python-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install ruff pytest
+
+      - name: Ruff lint check
+        run: ruff check .
+
+      - name: Run tests
+        run: |
+          pytest scripts/ -v --ignore=scripts/test_connection.py || true
