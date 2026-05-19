@@ -1,6 +1,12 @@
 # Tennis Player Development Platform
 ### An AI-Augmented Analytics Engineering Project on Databricks
 
+![dbt CI](https://github.com/kemmwu/tennis-player-development-platform/actions/workflows/dbt-ci.yml/badge.svg)
+![Python CI](https://github.com/kemmwu/tennis-player-development-platform/actions/workflows/python-ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue)
+![dbt](https://img.shields.io/badge/dbt-1.11-orange)
+![Databricks](https://img.shields.io/badge/platform-Databricks-red)
+
 > **One-line pitch:** An end-to-end Lakehouse platform built by a certified tennis coach, using AI to process unstructured data sources and help coaches improve student performance through data-driven decisions.
 
 **Target roles:** Analytics Engineer · Data Engineer · AI Engineer (data platform track)
@@ -79,7 +85,7 @@ Every tool above is either **Databricks-native**, **GitHub-native**, or the **in
 ---
 
 ## 3. Architecture Overview
-
+![Architecture Diagram](docs/architecture.png)
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        DATA SOURCES                             │
