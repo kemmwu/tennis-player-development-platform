@@ -231,3 +231,7 @@ tennis_analytics/logs/
 __pycache__/
 *.pyc
 .venv/
+
+
+# Synthetic data
+data/synthetic/
