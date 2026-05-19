@@ -218,3 +218,16 @@ __marimo__/
 .streamlit/secrets.toml
 
 .databricks
+
+
+
+# dbt
+tennis_analytics/target/
+tennis_analytics/dbt_packages/
+tennis_analytics/logs/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/

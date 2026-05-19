@@ -1,0 +1,51 @@
+name: dbt CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  dbt-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dbt
+        run: |
+          pip install dbt-core dbt-databricks
+
+      - name: Create dbt profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat <<EOF > ~/.dbt/profiles.yml
+          tennis_analytics:
+            target: dev
+            outputs:
+              dev:
+                type: databricks
+                catalog: tennis_dev
+                schema: silver
+                host: ${{ secrets.DATABRICKS_HOST }}
+                http_path: ${{ secrets.DATABRICKS_HTTP_PATH }}
+                token: ${{ secrets.DATABRICKS_TOKEN }}
+                threads: 4
+          EOF
+
+      - name: dbt parse (syntax check)
+        working-directory: tennis_analytics
+        run: dbt parse
+
+      - name: dbt compile
+        working-directory: tennis_analytics
+        run: dbt compile
