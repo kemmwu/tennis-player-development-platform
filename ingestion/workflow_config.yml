@@ -1,0 +1,32 @@
+# tennis_ingestion_pipeline
+# Databricks Workflow definition for documentation purposes
+# Actual workflow is configured in Databricks UI
+
+name: tennis_ingestion_pipeline
+schedule:
+  quartz_cron_expression: "0 0/30 * * * ?"
+  timezone_id: "America/Los_Angeles"
+
+email_notifications:
+  on_failure:
+    - kemmwu@gmail.com
+
+tasks:
+  - task_key: ingest_students
+    notebook_task:
+      notebook_path: /Workspace/Users/kemmwu@gmail.com/ingestion/bronze_students
+    job_cluster_key: serverless
+
+  - task_key: ingest_match_stats
+    depends_on:
+      - task_key: ingest_students
+    notebook_task:
+      notebook_path: /Workspace/Users/kemmwu@gmail.com/ingestion/bronze_match_stats
+    job_cluster_key: serverless
+
+  - task_key: ingest_training_sessions
+    depends_on:
+      - task_key: ingest_match_stats
+    notebook_task:
+      notebook_path: /Workspace/Users/kemmwu@gmail.com/ingestion/bronze_training_sessions
+    job_cluster_key: serverless
