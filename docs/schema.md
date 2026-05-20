@@ -65,6 +65,7 @@ Also stores the coach's raw note text for that match.
 | `returns_in_deuce` | DOUBLE | Return accuracy on deuce side (0–1) |
 | `avg_return_speed` | INT | Average return speed |
 | `max_return_speed` | INT | Maximum return speed |
+| `total_moving_distance` | DOUBLE | Total distance covered by player during match |
 | `winners` | INT | Total winners hit |
 | `unforced_errors` | INT | Total unforced errors |
 | `break_points_won` | INT | Break points converted |
@@ -92,7 +93,7 @@ Also stores the coach's raw note text for that session.
 | `session_type` | STRING | Baseline / serve / volleys / fitness etc. |
 | `drills_completed` | STRING | Description of drills done |
 | `raw_note_text` | STRING | Coach's note for this session (nullable) |
-| `heart_rate` | STRING | Average heart rate during session |
+| `avg_heart_rate` | INT | Average heart rate during session (bpm) |
 | `shots_in` | DOUBLE | % of shots that landed in (0–1) |
 | `longest_rally` | INT | Longest rally in number of shots |
 | `rallies_above_5_shots` | DOUBLE | % of rallies exceeding 5 shots (0–1) |
@@ -123,11 +124,11 @@ One record per student. All intake form fields stored directly on this table.
 | `student_id` | STRING | Unique student ID (PK) |
 | `intake_id` | STRING | Unique intake submission ID |
 | `full_name` | STRING | Student full name |
-| `chinese_name` | STRING | Chinese name if applicable |
+| `chinese_name` | STRING | Chinese name if applicable (nullable) |
 | `preferred_name` | STRING | Name used in coaching |
 | `date_of_birth` | DATE | Date of birth |
 | `utr_rating` | DOUBLE | Self-reported UTR rating |
-| `age_group` | STRING | U10 / U12 / U14 / U16 / Adult |
+| `age_group` | STRING | U10 / U12 / U14 / U16 / U18 / Adult |
 | `dominant_hand` | STRING | Right / Left |
 | `height` | STRING | Student height |
 | `years_playing` | INT | Years of tennis experience |
@@ -137,7 +138,7 @@ One record per student. All intake form fields stored directly on this table.
 | `goals` | STRING | Student's stated goals |
 | `injury_history` | STRING | Known injuries |
 | `previous_coaching` | STRING | Prior coaching background |
-| `competition_level` | STRING | Recreational / competitive |
+| `competition_level` | STRING | competitive / recreational |
 | `contact_name` | STRING | Student or guardian contact name |
 | `contact_email` | STRING | Student or guardian contact email |
 | `kafka_offset` | BIGINT | Kafka message offset |
@@ -153,7 +154,7 @@ One record per student. All intake form fields stored directly on this table.
 ### bronze.note_extractions
 LLM-extracted observations from coach notes. Each record links to either
 a match or a training session via `event_id` + `event_type`.
-`raw_note_text` lives in the parent session table, not here.
+Raw note text lives in the parent session table, not here.
 
 | Column | Type | Description |
 |---|---|---|
@@ -200,9 +201,9 @@ Cleaned student profiles with SCD Type 2 history tracking.
 | `preferred_name` | STRING | Name used in day-to-day coaching |
 | `date_of_birth` | DATE | Typed and validated |
 | `utr_rating` | DOUBLE | Cleaned UTR rating |
-| `age_group` | STRING | U10 / U12 / U14 / U16 / Adult |
+| `age_group` | STRING | U10 / U12 / U14 / U16 / U18 / Adult |
 | `dominant_hand` | STRING | Right / Left |
-| `competition_level` | STRING | Recreational / competitive |
+| `competition_level` | STRING | competitive / recreational |
 | `coach_id` | STRING | Assigned coach |
 | `goals` | STRING | Student's stated goals |
 | `valid_from` | TIMESTAMP | When this version became active |
@@ -228,6 +229,9 @@ Cleaned match statistics. One row per match per player.
 | `max_serve_speed` | INT | Maximum serve speed |
 | `returns_in_ad` | DOUBLE | Validated 0–1 |
 | `returns_in_deuce` | DOUBLE | Validated 0–1 |
+| `avg_return_speed` | INT | Average return speed |
+| `max_return_speed` | INT | Maximum return speed |
+| `total_moving_distance` | DOUBLE | Total distance covered during match |
 | `winners` | INT | Validated non-negative |
 | `unforced_errors` | INT | Validated non-negative |
 | `break_points_won` | INT | Break points converted |
@@ -249,6 +253,7 @@ Cleaned training session data with shot statistics.
 | `session_date` | DATE | Type-cast session date |
 | `session_type` | STRING | Type of training session |
 | `raw_note_text` | STRING | Coach's note (nullable) |
+| `avg_heart_rate` | INT | Average heart rate during session (bpm) |
 | `shots_in` | DOUBLE | Validated 0–1 |
 | `longest_rally` | INT | Validated non-negative |
 | `rallies_above_5_shots` | DOUBLE | Validated 0–1 |
@@ -329,6 +334,9 @@ Partitioned by `match_year_month` for query performance.
 | `serves_in_ad` | DOUBLE | |
 | `serves_in_deuce` | DOUBLE | |
 | `avg_serve_speed` | INT | |
+| `returns_in_ad` | DOUBLE | |
+| `returns_in_deuce` | DOUBLE | |
+| `total_moving_distance` | DOUBLE | Total distance covered during match |
 | `winners` | INT | |
 | `unforced_errors` | INT | |
 | `break_points_won` | INT | |
@@ -351,6 +359,7 @@ Training session facts. Grain: one session × one player.
 | `player_sk` | STRING | FK to dim_players |
 | `session_date_key` | INT | YYYYMMDD format |
 | `session_type` | STRING | Type of training |
+| `avg_heart_rate` | INT | Average heart rate during session (bpm) |
 | `shots_in` | DOUBLE | |
 | `longest_rally` | INT | |
 | `rallies_above_5_shots` | DOUBLE | |
@@ -376,7 +385,7 @@ Flagship metric. One row per player per week.
 | `development_score` | DOUBLE | Composite score 0–100 |
 | `win_rate_trend` | DOUBLE | 40% weight component |
 | `opponent_strength_score` | DOUBLE | 30% weight component |
-| `technique_progression` | DOUBLE | 20% weight — from LLM sentiment trend |
+| `technique_progression` | DOUBLE | 20% weight — derived from LLM sentiment trend |
 | `break_point_conversion` | DOUBLE | 10% weight component |
 | `calculated_at` | TIMESTAMP | When score was computed |
 

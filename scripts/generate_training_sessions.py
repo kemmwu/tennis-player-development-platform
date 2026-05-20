@@ -120,7 +120,6 @@ def generate_session(student: dict, session_date: date) -> dict:
 
 def generate_session_schedule(student: dict) -> list[dict]:
     sessions    = []
-    competition = student["competition_level"]
     freq        = int(student["training_frequency_per_week"])
 
     current = START_DATE

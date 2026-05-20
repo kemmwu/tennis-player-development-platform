@@ -139,7 +139,6 @@ def generate_match_schedule(student: dict) -> list[dict]:
     """Generate a realistic match schedule for one student over 2 years."""
     matches      = []
     competition  = student["competition_level"]
-    utr          = student["utr_rating"]
 
     # Competitive players play more matches
     if competition == "competitive":
