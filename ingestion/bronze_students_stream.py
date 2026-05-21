@@ -16,6 +16,9 @@
 
 from datetime import datetime
 from pyspark.sql import functions as F
+import uuid
+from pyspark.sql.functions import udf
+from pyspark.sql.types import StringType
 
 # COMMAND ----------
 
@@ -47,9 +50,6 @@ raw_stream = (
 # COMMAND ----------
 
 # ── STEP 2: PARSE AND ENRICH ───────────────────────────────────────
-import uuid
-from pyspark.sql.functions import udf
-from pyspark.sql.types import StringType
 
 generate_uuid = udf(lambda: str(uuid.uuid4()), StringType())
 
@@ -107,7 +107,7 @@ print(f"[{datetime.now()}] Streaming query complete.")
 
 # ── STEP 4: VERIFY ────────────────────────────────────────────────
 result = spark.table(FULL_TABLE)
-print(f"\n── bronze.raw_students (stream path) ───────────")
+print("\n── bronze.raw_students (stream path) ───────────")
 print(f"Total rows: {result.count():,}")
 result.orderBy("_ingested_at", ascending=False).show(5)
 # ──────────────────────────────────────────────────────────────────
