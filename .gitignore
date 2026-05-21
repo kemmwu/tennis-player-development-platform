@@ -235,3 +235,9 @@ __pycache__/
 
 # Synthetic data
 data/synthetic/
+
+# Real data files — stored in Databricks Volumes, not GitHub
+data/real/
+*.png
+*.jpg
+*.jpeg
