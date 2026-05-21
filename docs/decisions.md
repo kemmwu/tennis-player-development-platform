@@ -250,3 +250,72 @@ improved with more time.
 - **Streaming volume:** Lakeflow Connect + Kafka is configured for
   low-volume intake events. True high-throughput streaming would
   require tuned Spark Structured Streaming configurations.
+
+---
+
+## Decision 9: Screenshot Filename Convention as Session Identifier
+
+**Date:** May 2026
+**Status:** Decided
+
+### Context
+SwingVision generates multiple screenshots per session — a player's match
+or training stats are spread across several pages (summary, serve stats,
+rally stats, notes). These screenshots are uploaded separately to the
+Volume, so the pipeline needs a way to:
+1. Know which screenshots belong to the same session
+2. Distinguish between a morning session and an evening session
+   for the same player on the same day
+3. Link coaching notes (also captured as screenshots) to their
+   parent session without a separate upload step
+
+### Options Considered
+| Option | Pros | Cons |
+|---|---|---|
+| Match by player + date only | Simple | Breaks if two sessions same day |
+| Manual mapping CSV | Explicit, zero ambiguity | Requires maintenance every upload |
+| Separate notes folder | Clean separation | Notes and stats become two ingestion pipelines to join |
+| Filename convention with time identifier | Self-describing, deterministic, zero maintenance | Requires discipline at upload time |
+
+### Decision
+Enforced a strict filename convention:
+
+YYYYMMDDHHNN_firstname_match_N.png
+YYYYMMDDHHNN_firstname_training_N.png
+
+The `YYYYMMDDHHNN` prefix (date + start time in 24h format) acts as a
+unique session identifier. All screenshots sharing the same prefix belong
+to the same session. The trailing `_N` identifies the page number within
+that session.
+
+Examples:
+- `202503151400_alex_match_1.png` — Alex's 2pm match, page 1
+- `202503151400_alex_match_2.png` — same match, page 2
+- `202503151400_alex_match_3.png` — same match, page 3 (notes)
+- `202503151900_alex_training_1.png` — Alex's 7pm training, different session
+
+The ingestion notebook parses the filename to extract `player_name`,
+`session_date`, `session_time`, and `session_type` automatically.
+Claude Vision then identifies the screenshot type (stats page vs notes
+page) and extracts the appropriate fields from each.
+
+This design means coaching notes require no separate upload — they are
+captured as the last screenshot in a session group and identified
+automatically by Claude.
+
+### Why This Works for This Domain
+As a coach uploading screenshots manually after each session, the naming
+convention costs nothing extra — I am already naming files when saving
+them. The time identifier also matches how I naturally think about
+sessions: "Alex's 2pm match" is unambiguous even if he trains again at 7pm.
+
+### What I Would Do Differently
+Build a small mobile shortcut (iOS Shortcut or similar) that
+auto-renames screenshots to this convention at capture time, eliminating
+any chance of naming errors before upload.
+
+**Why store raw counts instead of percentages:**
+SwingVision shows serve stats as "18/36 (50%)". We store the raw counts
+(18 and 36) rather than the percentage. The Silver layer calculates
+`first_serves_in_pct = first_serves_in / first_serves_total`.
+This avoids rounding loss and gives downstream models more flexibility.
