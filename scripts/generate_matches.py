@@ -186,7 +186,7 @@ def main():
     df = df.sort_values("match_date").reset_index(drop=True)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(OUTPUT_FILE, index=False)
+    df.to_parquet(OUTPUT_FILE, index=False, coerce_timestamps="us", allow_truncated_timestamps=True)
 
     print(f"\nSaved {len(df):,} match records to {OUTPUT_FILE}")
     print("\n── Summary ──────────────────────────────────────")

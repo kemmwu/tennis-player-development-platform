@@ -190,7 +190,7 @@ print(f"[{datetime.now()}] Streaming query complete.")
 result = spark.table(FULL_TABLE)
 count  = result.count()
 
-print(f"\n── bronze.raw_training_sessions ─────────────────")
+print("\n── bronze.raw_training_sessions ─────────────────")
 print(f"Total rows:      {count:,}")
 print(f"Unique players:  {result.select('player_id').distinct().count():,}")
 print(f"Unique sessions: {result.select('session_id').distinct().count():,}")

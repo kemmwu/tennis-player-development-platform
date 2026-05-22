@@ -18,7 +18,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import (
     StructType, StructField,
     StringType, DoubleType, IntegerType,
-    BooleanType, LongType
+    BooleanType
 )
 
 # COMMAND ----------
@@ -190,7 +190,7 @@ print(f"[{datetime.now()}] Streaming query complete.")
 result = spark.table(FULL_TABLE)
 count  = result.count()
 
-print(f"\n── bronze.raw_match_extractions ─────────────────")
+print("\n── bronze.raw_match_extractions ─────────────────")
 print(f"Total rows:      {count:,}")
 print(f"Unique players:  {result.select('player_id').distinct().count():,}")
 print(f"Unique matches:  {result.select('match_id').distinct().count():,}")

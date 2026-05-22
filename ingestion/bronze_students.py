@@ -14,13 +14,12 @@
 
 # COMMAND ----------
 
-import hashlib
-from datetime import datetime, timezone
+from datetime import datetime
 from pyspark.sql import functions as F
 from pyspark.sql.types import (
     StructType, StructField,
-    StringType, DateType, DoubleType,
-    IntegerType, BooleanType, TimestampType, LongType
+    StringType, DoubleType,
+    IntegerType, BooleanType, LongType
 )
 
 # COMMAND ----------
@@ -209,12 +208,12 @@ print(f"[{datetime.now()}] Streaming query complete.")
 result = spark.table(FULL_TABLE)
 count  = result.count()
 
-print(f"\n── bronze.raw_students ──────────────────────────")
+print("\n── bronze.raw_students ──────────────────────────")
 print(f"Total rows:        {count:,}")
 print(f"Unique students:   {result.select('student_id').distinct().count():,}")
-print(f"Age groups:")
+print("Age groups:")
 result.groupBy("age_group").count().orderBy("age_group").show()
-print(f"Competition level:")
+print("Competition level:")
 result.groupBy("competition_level").count().show()
 # ──────────────────────────────────────────────────────────────────
 
