@@ -3,13 +3,15 @@ line-length = 100
 target-version = "py312"
 builtins = ["spark", "dbutils", "display", "sc", "sqlContext"]
 
-[tool.ruff.lint]
-select = ["E", "F", "W"]
-ignore = ["E501", "F403"]
-
 exclude = [
     ".venv",
     "typings/",
     "tennis_analytics/target",
     "tennis_analytics/dbt_packages",
+    "ingestion/",
+    "extraction/",
 ]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501", "F403"]
