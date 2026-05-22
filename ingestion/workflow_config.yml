@@ -36,3 +36,16 @@ tasks:
         notebook_path: /Workspace/Users/kemmwu@gmail.com/ingestion/bronze_students_stream
       job_cluster_key: serverless
       # No depends_on — runs independently from batch path
+  - task_key: ingest_screenshots
+      notebook_task:
+        notebook_path: /Workspace/Users/your-email/ingestion/bronze_screenshots
+      job_cluster_key: serverless
+      depends_on:
+        - task_key: ingest_students
+
+  - task_key: extract_sessions
+    notebook_task:
+      notebook_path: /Workspace/Users/your-email/extraction/extract_sessions
+    job_cluster_key: serverless
+    depends_on:
+      - task_key: ingest_screenshots
