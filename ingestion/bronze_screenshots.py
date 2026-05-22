@@ -18,8 +18,7 @@
 from datetime import datetime
 from pyspark.sql import functions as F
 from pyspark.sql.types import (
-    StructType, StructField,
-    StringType, IntegerType, LongType, TimestampType
+    LongType
 )
 
 # COMMAND ----------
@@ -165,7 +164,7 @@ print(f"[{datetime.now()}] Screenshot ingestion complete.")
 
 # ── STEP 5: VERIFY ────────────────────────────────────────────────
 result = spark.table(FULL_TABLE)
-print(f"\n── bronze.raw_screenshots ───────────────────────")
+print("\n── bronze.raw_screenshots ───────────────────────")
 print(f"Total screenshots:  {result.count():,}")
 print(f"Unique sessions:    {result.select('session_id').distinct().count():,}")
 print(f"Unique players:     {result.select('player_name').distinct().count():,}")

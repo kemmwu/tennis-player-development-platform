@@ -16,7 +16,7 @@
 
 # COMMAND ----------
 
-%pip install requests
+%pip install requests  # noqa: E999
 
 # COMMAND ----------
 
