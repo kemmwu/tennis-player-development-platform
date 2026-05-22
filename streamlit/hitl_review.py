@@ -8,6 +8,12 @@ import pandas as pd
 from databricks import sql as dbsql
 import os
 
+# Add to the sidebar section
+st.sidebar.markdown("---")
+st.sidebar.markdown("**Quick Links**")
+st.sidebar.markdown("[🔍 Audit Findings](./audit_findings)")
+st.sidebar.markdown("[💬 Ask Genie](https://dbc-66b56d97-276e.cloud.databricks.com/genie)")
+
 # ── PAGE CONFIG ───────────────────────────────────────────────────
 st.set_page_config(
     page_title="Tennis Platform — HITL Review",
