@@ -91,6 +91,9 @@ def load_pending_reviews(threshold: float, stype: str) -> pd.DataFrame:
             source_file
         FROM tennis_dev.bronze.raw_match_extractions
         WHERE extraction_confidence < {threshold}
+        AND match_id NOT IN (
+            SELECT session_id FROM tennis_dev.gold.extraction_eval_set
+        )
         {type_filter if stype == "match" or stype == "All" else "AND 1=0"}
     """
 
@@ -112,6 +115,9 @@ def load_pending_reviews(threshold: float, stype: str) -> pd.DataFrame:
             source_file
         FROM tennis_dev.bronze.raw_training_sessions
         WHERE extraction_confidence < {threshold}
+        AND session_id NOT IN (
+            SELECT session_id FROM tennis_dev.gold.extraction_eval_set
+        )
         {type_filter if stype == "training" or stype == "All" else "AND 1=0"}
     """
 
