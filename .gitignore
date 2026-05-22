@@ -241,3 +241,5 @@ data/real/
 *.png
 *.jpg
 *.jpeg
+
+streamlit/.streamlit/secrets.toml
