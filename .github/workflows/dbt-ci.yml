@@ -41,6 +41,9 @@ jobs:
                 token: ${{ secrets.DATABRICKS_TOKEN }}
                 threads: 4
           EOF
+      - name: Install dbt packages
+        run: dbt deps
+        working-directory: tennis_analytics
 
       - name: dbt parse (syntax check)
         working-directory: tennis_analytics
