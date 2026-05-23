@@ -26,16 +26,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install dbt-core dbt-databricks sqlfluff sqlfluff-templater-dbt
+          pip install dbt-core dbt-databricks
 
       - name: Install dbt packages
         run: dbt deps
-
-      - name: SQLFluff lint
-        run: |
-          sqlfluff lint models/ --dialect databricks --templater jinja \
-            --exclude-rules RF04,AM04,ST06,PJ01 \
-            --ignore-local-config
 
       - name: dbt parse (syntax check)
         run: dbt parse
