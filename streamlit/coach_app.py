@@ -114,7 +114,7 @@ def load_player_data(player_id: str) -> dict:
             score_trend
         FROM tennis_dev.silver_gold.mart_coach_weekly_digest
         WHERE player_id = '{player_id}'
-        ORDER BY week_start DESC
+        ORDER BY score_week DESC
         LIMIT 12
     """)
 
