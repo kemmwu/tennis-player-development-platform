@@ -2,53 +2,86 @@ name: dbt CI
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  dbt-check:
+  dbt-ci:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tennis_analytics
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for state:modified+ slim CI
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install dbt
+      - name: Install dependencies
         run: |
           pip install dbt-core dbt-databricks
 
-      - name: Create dbt profiles.yml
+      - name: Create dbt profile
         run: |
           mkdir -p ~/.dbt
-          cat <<EOF > ~/.dbt/profiles.yml
+          cat > ~/.dbt/profiles.yml << 'EOF'
           tennis_analytics:
             target: dev
             outputs:
               dev:
                 type: databricks
-                catalog: tennis_dev
-                schema: silver
                 host: ${{ secrets.DATABRICKS_HOST }}
                 http_path: ${{ secrets.DATABRICKS_HTTP_PATH }}
                 token: ${{ secrets.DATABRICKS_TOKEN }}
+                schema: dev
                 threads: 4
           EOF
+
       - name: Install dbt packages
         run: dbt deps
-        working-directory: tennis_analytics
 
       - name: dbt parse (syntax check)
-        working-directory: tennis_analytics
         run: dbt parse
 
-      - name: dbt compile
-        working-directory: tennis_analytics
-        run: dbt compile
+      - name: dbt build — changed models only (slim CI)
+        if: github.event_name == 'pull_request'
+        env:
+          DATABRICKS_HOST:       ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_HTTP_PATH:  ${{ secrets.DATABRICKS_HTTP_PATH }}
+          DATABRICKS_TOKEN:      ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          dbt build \
+            --select state:modified+ \
+            --defer \
+            --state ./target \
+            --exclude tag:slow
+
+      - name: dbt build — full build on merge to main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          DATABRICKS_HOST:       ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_HTTP_PATH:  ${{ secrets.DATABRICKS_HTTP_PATH }}
+          DATABRICKS_TOKEN:      ${{ secrets.DATABRICKS_TOKEN }}
+        run: dbt build
+
+      - name: Generate dbt docs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          DATABRICKS_HOST:       ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_HTTP_PATH:  ${{ secrets.DATABRICKS_HTTP_PATH }}
+          DATABRICKS_TOKEN:      ${{ secrets.DATABRICKS_TOKEN }}
+        run: dbt docs generate
+
+      - name: Publish dbt docs to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir:  tennis_analytics/target

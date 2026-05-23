@@ -1,0 +1,43 @@
+# Data Contract: bronze.raw_training_sessions
+# Owner: kemmwu@gmail.com
+# Version: 1.0
+
+contract:
+  name: raw_training_sessions
+  layer: bronze
+  owner: kemmwu@gmail.com
+  sla:
+    freshness_warn_hours: 48
+    freshness_error_hours: 72
+    min_rows: 1
+
+  schema:
+    - name: session_id
+      type: STRING
+      nullable: false
+      description: Unique session identifier parsed from filename
+
+    - name: player_id
+      type: STRING
+      nullable: false
+      description: Player first name parsed from filename
+
+    - name: session_date
+      type: DATE
+      nullable: false
+      description: Session date parsed from filename
+
+    - name: extraction_confidence
+      type: DOUBLE
+      nullable: false
+      description: Claude API confidence score 0-1
+
+    - name: shots_in
+      type: DOUBLE
+      nullable: true
+      description: Overall shot accuracy 0-1
+
+    - name: forehand_cross_court_in
+      type: DOUBLE
+      nullable: true
+      description: Forehand cross-court accuracy 0-1

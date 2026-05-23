@@ -11,11 +11,13 @@ cleaned as (
         trim(lower(preferred_name))                     as preferred_name,
         date_of_birth,
         try_cast(utr_rating as double)                  as utr_rating,
+        age_group,
         lower(dominant_hand)                            as dominant_hand,
         height,
         try_cast(years_playing as int)                  as years_playing,
         try_cast(training_frequency_per_week as int)    as training_frequency_per_week,
         lower(competition_level)                        as competition_level,
+        coach_id,                                       -- ADD THIS
         goals,
         injury_history,
         previous_coaching,

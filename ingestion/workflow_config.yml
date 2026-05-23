@@ -7,9 +7,21 @@ schedule:
   quartz_cron_expression: "0 0/30 * * * ?"
   timezone_id: "America/Los_Angeles"
 
+# Add to existing workflow config
+
 email_notifications:
+  on_start: []
+  on_success:
+    - kemmwu@gmail.com
   on_failure:
     - kemmwu@gmail.com
+
+health:
+  rules:
+    - type: metric_check
+      metric: run_duration_seconds
+      op: "GREATER_THAN"
+      value: 1800
 
 tasks:
   - task_key: ingest_students
@@ -32,16 +44,16 @@ tasks:
     job_cluster_key: serverless
 
   - task_key: ingest_students_stream
-      notebook_task:
-        notebook_path: /Workspace/Users/kemmwu@gmail.com/ingestion/bronze_students_stream
-      job_cluster_key: serverless
-      # No depends_on — runs independently from batch path
+    notebook_task:
+      notebook_path: /Workspace/Users/kemmwu@gmail.com/ingestion/bronze_students_stream
+    job_cluster_key: serverless
+    # No depends_on — runs independently from batch path
   - task_key: ingest_screenshots
-      notebook_task:
-        notebook_path: /Workspace/Users/kemmwu@gmail.com/ingestion/bronze_screenshots
-      job_cluster_key: serverless
-      depends_on:
-        - task_key: ingest_students
+    notebook_task:
+      notebook_path: /Workspace/Users/kemmwu@gmail.com/ingestion/bronze_screenshots
+    job_cluster_key: serverless
+    depends_on:
+      - task_key: ingest_students
 
   - task_key: extract_sessions
     notebook_task:
