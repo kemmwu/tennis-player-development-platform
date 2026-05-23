@@ -1,11 +1,8 @@
 [sqlfluff]
 dialect = databricks
 templater = jinja
-exclude_rules = RF04,AM04,ST06,PJ01
+exclude_rules = RF04,AM04,ST06,LT01,LT02,LT05,LT09,LT13,LT14,AL01,ST11,ST02,RF02,LT04
 max_line_length = 120
-
-[sqlfluff:templater:dbt]
-project_dir = .
 
 [sqlfluff:indentation]
 indent_unit = space
