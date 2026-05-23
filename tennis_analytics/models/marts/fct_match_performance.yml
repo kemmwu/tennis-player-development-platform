@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: fct_match_performance
+    description: >
+      Core fact table. Grain: one match per player.
+      Partitioned by match_year_month for query performance.
+      Includes opponent strength weighting for development score calculation.
+    columns:
+      - name: match_sk
+        description: "Surrogate key"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: match_id
+        description: "Natural key from filename"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: player_id
+        description: "Canonical player ID"
+        data_tests:
+          - not_null
+
+      - name: match_date
+        description: "Date of match"
+        data_tests:
+          - not_null
+          

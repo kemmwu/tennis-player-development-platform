@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: mart_coach_weekly_digest
+    description: >
+      Weekly summary for coaches. One row per player per week.
+      Incremental model — only processes new weeks on each run.
+      Includes score trend vs prior week for quick status assessment.
+    columns:
+      - name: digest_id
+        description: "Surrogate key"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: score_trend
+        description: "improving / declining / stable based on score change > 2 points"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['improving', 'declining', 'stable']

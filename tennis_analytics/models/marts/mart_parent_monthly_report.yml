@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: mart_parent_monthly_report
+    description: >
+      Monthly progress report for parents. One row per player per month.
+      Incremental model — only processes new months on each run.
+      Combines match performance, training volume, and development score
+      into a single parent-friendly summary.
+    columns:
+      - name: report_id
+        description: "Surrogate key"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: player_id
+        description: "Canonical player ID"
+        data_tests:
+          - not_null
+
+      - name: report_month
+        description: "YYYY-MM format"
+        data_tests:
+          - not_null
+
+      - name: development_score
+        description: "Average development score across weeks in this month"
+        

@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: mart_player_development_score
+    description: >
+      Flagship metric. One row per player per week.
+      Composite development score 0-100 combining:
+        - Win rate trend weighted by opponent strength (40%)
+        - Average opponent strength (30%)
+        - Technique progression from training accuracy (20%)
+        - Break point conversion rate (10%)
+
+      Score components are each normalized to 0-100 before weighting.
+      Full formula documented in model SQL and /docs/decisions.md.
+    columns:
+      - name: player_id
+        description: "Canonical player ID"
+        data_tests:
+          - not_null
+
+      - name: score_week
+        description: "Week start date for this score"
+        data_tests:
+          - not_null
+
+      - name: development_score
+        description: "Composite development score 0-100. Higher is better."
+        data_tests:
+          - not_null
+
+      - name: win_rate_score
+        description: "Win rate component 0-100 (40% weight)"
+
+      - name: opponent_strength_score
+        description: "Opponent strength component 0-100 (30% weight)"
+
+      - name: technique_score
+        description: "Technique progression component 0-100 (20% weight)"
+
+      - name: break_point_score
+        description: "Break point conversion component 0-100 (10% weight)"
+        
