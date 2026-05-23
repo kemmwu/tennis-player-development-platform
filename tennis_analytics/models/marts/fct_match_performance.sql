@@ -58,6 +58,7 @@ final as (
         -- Notes
         case when m.raw_note_text is not null
              then true else false end                   as has_note,
+        m.raw_note_text,
         m.extraction_confidence
 
     from matches m
