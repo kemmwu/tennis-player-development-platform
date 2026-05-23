@@ -319,3 +319,35 @@ SwingVision shows serve stats as "18/36 (50%)". We store the raw counts
 (18 and 36) rather than the percentage. The Silver layer calculates
 `first_serves_in_pct = first_serves_in / first_serves_total`.
 This avoids rounding loss and gives downstream models more flexibility.
+
+
+---
+
+## Decision 10: 7-Day Window for Note-to-Match Linkage
+
+**Date:** May 2026
+**Status:** Decided
+
+### Context
+Coaching notes are written after training sessions. To measure whether coaching
+observations predict match outcomes, we need to link notes to subsequent matches.
+The question is: what time window makes sense?
+
+### Options Considered
+| Window | Pros | Cons |
+|---|---|---|
+| 3 days | Very tight causal link | Misses most matches — students don't compete that frequently |
+| 7 days | Matches weekly competition cycle | Occasional false links for bi-weekly competitors |
+| 14 days | Catches more matches | Too loose — many unrelated events in two weeks |
+| Session-level tagging | Perfect precision | Requires manual tagging by coach — not scalable |
+
+### Decision
+7-day window. Most junior and recreational players compete once per week.
+A coaching note written after Monday training is preparation for the weekend
+match. 7 days captures this relationship without being so loose that it links
+unrelated sessions.
+
+### What I Would Do Differently
+Add a `target_match_date` field to the coaching note at capture time — letting
+the coach explicitly tag which match a note is preparing for. This would make
+the linkage exact rather than time-window-based.

@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: int_notes_with_match_linkage
+    description: >
+      Links training sessions to subsequent match performance using a 7-day window.
+      For each training session, finds the closest match played by the same player
+      within 7 days. This linkage is used in Gold marts to measure whether training
+      observations correlate with match outcomes.
+
+      The 7-day window is a domain-informed choice based on real coaching practice.
+      Most students compete weekly, so a coaching note written after Monday training
+      is likely aimed at preparation for a Saturday match. Notes written more than
+      7 days before a match are unlikely to be directly connected to that match.
+
+      This design decision is documented in /docs/decisions.md.
+    columns:
+      - name: player_id
+        description: "Canonical player ID"
+        data_tests:
+          - not_null
+
+      - name: training_date
+        description: "Date of the training session"
+        data_tests:
+          - not_null
+
+      - name: days_to_match
+        description: >
+          Number of days between training session and linked match.
+          Null if no match within 7 days.
+
+      - name: has_linked_match
+        description: "True if a match was played within 7 days of this training session"

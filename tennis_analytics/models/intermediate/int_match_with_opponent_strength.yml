@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: int_match_with_opponent_strength
+    description: >
+      Extends stg_match_stats with opponent strength weighting.
+      opponent_strength_weight ranges from 0.5 (weak opponent) to 2.0 (very strong).
+      weighted_win combines match result with opponent strength for the development score.
+      When opponent UTR is unknown, weight defaults to 1.0 (neutral).
+      The weighting formula (1.0 + (utr - 7.0) / 10.0) is calibrated for junior
+      players where UTR 7 is a reasonable mid-level benchmark.
+    columns:
+      - name: match_id
+        description: "Unique match identifier"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: opponent_strength_weight
+        description: "Opponent strength multiplier 0.5-2.0. Higher = stronger opponent."
+
+      - name: weighted_win
+        description: >
+          Win value weighted by opponent strength. 0.0 for losses.
+          Ranges 0.5-2.0 for wins depending on opponent UTR.
+          
