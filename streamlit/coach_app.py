@@ -45,12 +45,11 @@ def load_players() -> list:
     """)
     return df["player_id"].tolist()
 
-players     = load_players()
-selected    = st.sidebar.selectbox("Select student", players)
+players  = load_players()
+selected = st.sidebar.selectbox("Select student", players)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Quick Links**")
-st.sidebar.markdown("[📊 Parent Dashboard](#)")
 st.sidebar.markdown("[🔍 HITL Review](./hitl_review)")
 st.sidebar.markdown(
     "[💬 Ask Genie]"
@@ -102,19 +101,18 @@ def load_player_data(player_id: str) -> dict:
 
     scores = run_query(f"""
         SELECT
-            score_week,
+            week_start,
             development_score,
-            win_rate_score,
-            opponent_strength_score,
-            technique_score,
-            break_point_score,
+            prior_week_score,
+            score_change,
+            score_trend,
             matches_played,
             matches_won,
             sessions_completed,
-            score_trend
+            avg_shots_per_hour
         FROM tennis_dev.silver_gold.mart_coach_weekly_digest
         WHERE player_id = '{player_id}'
-        ORDER BY score_week DESC
+        ORDER BY week_start DESC
         LIMIT 12
     """)
 
@@ -145,8 +143,8 @@ scores_df  = data["scores"]
 matches_df = data["matches"]
 
 if not scores_df.empty:
-    latest = scores_df.iloc[0]
-    trend  = latest.get("score_trend", "stable")
+    latest     = scores_df.iloc[0]
+    trend      = latest.get("score_trend", "stable")
     trend_icon = "📈" if trend == "improving" \
         else "📉" if trend == "declining" else "➡️"
 
@@ -158,17 +156,23 @@ if not scores_df.empty:
     )
     m2.metric(
         "Matches This Week",
-        int(latest["matches_played"]) if pd.notna(latest["matches_played"]) else 0
+        int(latest["matches_played"])
+        if pd.notna(latest["matches_played"]) else 0
     )
     m3.metric(
         "Sessions This Week",
-        int(latest["sessions_completed"]) if pd.notna(latest["sessions_completed"]) else 0
+        int(latest["sessions_completed"])
+        if pd.notna(latest["sessions_completed"]) else 0
     )
 
     if not matches_df.empty:
         wins  = matches_df["player_won"].sum()
         total = len(matches_df)
-        m4.metric("Recent Win Rate", f"{wins/total*100:.0f}%", f"{wins}/{total}")
+        m4.metric(
+            "Recent Win Rate",
+            f"{wins/total*100:.0f}%",
+            f"{wins}/{total}"
+        )
 
 st.markdown("---")
 
@@ -176,18 +180,20 @@ st.markdown("---")
 if not scores_df.empty:
     st.subheader("📈 Development Score Trend")
     st.line_chart(
-        scores_df.set_index("score_week")[["development_score"]]
+        scores_df.set_index("week_start")[["development_score"]]
     )
 
-    with st.expander("Score components breakdown"):
+    with st.expander("Score details by week"):
         st.dataframe(
             scores_df[[
-                "score_week", "development_score",
-                "win_rate_score", "opponent_strength_score",
-                "technique_score", "break_point_score"
+                "week_start", "development_score",
+                "score_change", "score_trend",
+                "matches_played", "sessions_completed"
             ]],
             use_container_width=True
         )
+else:
+    st.info("No development score data yet.")
 
 st.markdown("---")
 
@@ -195,21 +201,21 @@ st.markdown("---")
 st.subheader("🎾 Recent Matches")
 
 if not matches_df.empty:
-    display_df = matches_df.copy()
-    display_df["result"]          = display_df["player_won"].map(
+    display_df               = matches_df.copy()
+    display_df["result"]     = display_df["player_won"].map(
         {True: "✅ Win", False: "❌ Loss", None: "—"}
     )
-    display_df["first_serve_%"]   = (
+    display_df["1st serve %"] = (
         display_df["first_serve_pct"] * 100
     ).round(1).astype(str) + "%"
-    display_df["bp_conversion"]   = (
+    display_df["bp conv %"]   = (
         display_df["break_point_conversion"] * 100
     ).round(1).astype(str) + "%"
 
     st.dataframe(
         display_df[[
             "match_date", "result", "score",
-            "first_serve_%", "bp_conversion",
+            "1st serve %", "bp conv %",
             "winners", "unforced_errors"
         ]],
         use_container_width=True
@@ -224,21 +230,21 @@ st.subheader("🏋️ Recent Training Sessions")
 
 training_df = data["training"]
 if not training_df.empty:
-    display_train = training_df.copy()
-    display_train["shots_in_%"] = (
+    display_train                = training_df.copy()
+    display_train["shots_in %"]  = (
         display_train["avg_shots_in"] * 100
     ).round(1).astype(str) + "%"
-    display_train["fh_accuracy"] = (
+    display_train["fh accuracy"] = (
         display_train["avg_forehand_cross_court_in"] * 100
     ).round(1).astype(str) + "%"
-    display_train["bh_accuracy"] = (
+    display_train["bh accuracy"] = (
         display_train["avg_backhand_cross_court_in"] * 100
     ).round(1).astype(str) + "%"
 
     st.dataframe(
         display_train[[
             "session_date", "sessions_on_day",
-            "shots_in_%", "fh_accuracy", "bh_accuracy",
+            "shots_in %", "fh accuracy", "bh accuracy",
             "max_longest_rally"
         ]],
         use_container_width=True
@@ -270,7 +276,6 @@ st.markdown(
 if st.button("Generate recommendation", type="primary"):
     with st.spinner("Analysing recent performance..."):
         try:
-            # Build context from recent data
             match_summary = ""
             if not matches_df.empty:
                 recent = matches_df.head(3)
@@ -330,9 +335,9 @@ Keep it practical and specific to the data shown."""
                     "content-type":      "application/json"
                 },
                 json={
-                    "model":    "claude-sonnet-4-6",
+                    "model":      "claude-sonnet-4-6",
                     "max_tokens": 500,
-                    "messages": [
+                    "messages":   [
                         {"role": "user", "content": prompt}
                     ]
                 },
