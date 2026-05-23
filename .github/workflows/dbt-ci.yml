@@ -28,6 +28,22 @@ jobs:
         run: |
           pip install dbt-core dbt-databricks
 
+      - name: Create dbt profile
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << 'EOF'
+          tennis_analytics:
+            target: dev
+            outputs:
+              dev:
+                type: databricks
+                host: ${{ secrets.DATABRICKS_HOST }}
+                http_path: ${{ secrets.DATABRICKS_HTTP_PATH }}
+                token: ${{ secrets.DATABRICKS_TOKEN }}
+                schema: dev
+                threads: 4
+          EOF
+
       - name: Install dbt packages
         run: dbt deps
 
