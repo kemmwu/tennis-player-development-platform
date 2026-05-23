@@ -351,3 +351,31 @@ unrelated sessions.
 Add a `target_match_date` field to the coaching note at capture time — letting
 the coach explicitly tag which match a note is preparing for. This would make
 the linkage exact rather than time-window-based.
+
+---
+
+## Decision 11: Player Development Score Formula
+
+**Date:** May 2026
+**Status:** Decided
+
+### Context
+Coaches need a single number to communicate player progress to parents.
+The score must be meaningful to non-technical stakeholders and grounded
+in real tennis performance indicators.
+
+### Component Weights
+| Component | Weight | Rationale |
+|---|---|---|
+| Win rate (weighted by opponent strength) | 40% | Winning is the ultimate objective |
+| Opponent strength | 30% | Winning against stronger players matters more |
+| Technique progression | 20% | Training quality predicts future match performance |
+| Break point conversion | 10% | Highest-leverage single stat in tennis |
+
+### Normalization
+Each component is normalized to 0-100 before weighting to ensure
+no single component dominates due to scale differences.
+
+### What I Would Do Differently
+Add a momentum component tracking score trajectory over time,
+not just the absolute score for the week.

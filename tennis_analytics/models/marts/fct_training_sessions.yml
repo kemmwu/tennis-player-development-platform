@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: fct_training_sessions
+    description: >
+      Training session facts. Grain: one row per player per day.
+      Multiple sessions on the same day are rolled up into a single record
+      by int_session_rollup_daily.
+    columns:
+      - name: session_sk
+        description: "Surrogate key"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: player_id
+        description: "Canonical player ID"
+        data_tests:
+          - not_null
+
+      - name: session_date
+        description: "Date of training"
+        data_tests:
+          - not_null
+          

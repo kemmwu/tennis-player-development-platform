@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: dim_players
+    description: >
+      Player dimension table with SCD Type 2 history.
+      One row per player per version — use is_current = true for latest profile.
+      Partitioned by is_current for query performance.
+    columns:
+      - name: player_sk
+        description: "Surrogate key — unique per player version"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: player_id
+        description: "Natural business key — player's first name"
+        data_tests:
+          - not_null
+
+      - name: is_current
+        description: "True for the active player profile"
+        data_tests:
+          - not_null
+          
