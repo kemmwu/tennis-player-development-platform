@@ -1,0 +1,43 @@
+# Data Contract: bronze.raw_match_extractions
+# Owner: kemmwu@gmail.com
+# Version: 1.0
+
+contract:
+  name: raw_match_extractions
+  layer: bronze
+  owner: kemmwu@gmail.com
+  sla:
+    freshness_warn_hours: 48
+    freshness_error_hours: 72
+    min_rows: 1
+
+  schema:
+    - name: match_id
+      type: STRING
+      nullable: false
+      description: Unique match identifier parsed from filename
+
+    - name: player_id
+      type: STRING
+      nullable: false
+      description: Player first name parsed from filename
+
+    - name: match_date
+      type: DATE
+      nullable: false
+      description: Match date parsed from filename
+
+    - name: extraction_confidence
+      type: DOUBLE
+      nullable: false
+      description: Claude API confidence score 0-1
+
+    - name: winners
+      type: BIGINT
+      nullable: true
+      description: Total winners
+
+    - name: unforced_errors
+      type: BIGINT
+      nullable: true
+      description: Total unforced errors

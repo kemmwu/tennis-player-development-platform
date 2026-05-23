@@ -13,9 +13,6 @@ cleaned as (
         cast(s.match_date as date)                              as match_date,
         s.session_time,
         s.opponent_name,
-        s.opponent_utr,
-        s.tournament_name,
-        lower(s.surface)                                        as surface,
         s.score,
         s.player_won,
 
