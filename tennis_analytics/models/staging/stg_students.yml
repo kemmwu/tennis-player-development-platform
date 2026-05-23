@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: stg_students
+    description: >
+      Cleaned student profiles sourced from Typeform intake form via Kafka.
+      Filters to current SCD2 records only. Type casts UTR rating from text
+      to double to handle decimal inputs from Typeform.
+    columns:
+      - name: student_id
+        description: "Unique student identifier"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: preferred_name
+        description: "Lowercased preferred name used in coaching"
+        data_tests:
+          - not_null
+
+      - name: utr_rating
+        description: "UTR rating cast to double. Null if not provided or unparseable."
+
+      - name: dominant_hand
+        description: "right or left — lowercased"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['right', 'left']
+                quote: true
+
+      - name: competition_level
+        description: "competitive or recreational — lowercased"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['competitive', 'recreational']
+                quote: true

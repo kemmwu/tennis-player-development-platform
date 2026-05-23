@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: stg_match_stats
+    description: >
+      Cleaned match statistics from SwingVision screenshots extracted by Claude API.
+      Calculates percentage metrics from raw counts stored in Bronze.
+      Player names resolved via stg_player_name_mapping.
+      Filters out records with null match_date or player_id.
+    columns:
+      - name: match_id
+        description: "Unique match identifier — parsed from filename prefix"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: player_id
+        description: "Canonical player ID resolved from name mapping"
+        data_tests:
+          - not_null
+
+      - name: match_date
+        description: "Match date parsed from filename"
+        data_tests:
+          - not_null
+
+      - name: first_serve_pct
+        description: "First serves in / first serves attempted. Null if no serve data."
+
+      - name: break_point_conversion
+        description: "Break points won / break points total when returning."
+
+      - name: extraction_confidence
+        description: "Claude API confidence score 0-1"
+        data_tests:
+          - not_null
+          

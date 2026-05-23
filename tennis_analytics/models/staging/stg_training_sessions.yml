@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: stg_training_sessions
+    description: >
+      Cleaned training session statistics from SwingVision screenshots.
+      All accuracy metrics stored as 0-1 decimals — multiply by 100 for %.
+      Player names resolved via stg_player_name_mapping.
+    columns:
+      - name: session_id
+        description: "Unique session identifier parsed from filename prefix"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: player_id
+        description: "Canonical player ID resolved from name mapping"
+        data_tests:
+          - not_null
+
+      - name: session_date
+        description: "Session date parsed from filename"
+        data_tests:
+          - not_null
+
+      - name: shots_in
+        description: "Overall shot accuracy as decimal 0-1"
+
+      - name: extraction_confidence
+        description: "Claude API confidence score 0-1"
+        data_tests:
+          - not_null
+          
