@@ -33,7 +33,10 @@ models:
   tennis_analytics:
     staging:
       +materialized: view
+      +schema: stg
     intermediate:
       +materialized: view
+      +schema: int
     marts:
       +materialized: table
+      +schema: gold

@@ -1,0 +1,62 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: tennis_dev
+    schema: bronze
+    description: "Raw ingested data from all Bronze layer tables"
+
+    freshness:
+      warn_after: {count: 24, period: hour}
+      error_after: {count: 48, period: hour}
+
+    loaded_at_field: _ingested_at
+
+    tables:
+      - name: raw_students
+        description: "Student profiles from Typeform intake form via Kafka"
+        columns:
+          - name: student_id
+            description: "Unique student identifier"
+          - name: preferred_name
+            description: "Name used in day-to-day coaching"
+          - name: utr_rating
+            description: "Self-reported UTR rating as text"
+
+      - name: raw_match_extractions
+        description: "Match statistics extracted by Claude API from SwingVision screenshots"
+        config:
+          freshness:
+            warn_after: {count: 48, period: hour}
+        columns:
+          - name: match_id
+            description: "Unique match identifier parsed from filename"
+          - name: player_id
+            description: "Player first name parsed from filename"
+          - name: match_date
+            description: "Match date parsed from filename"
+          - name: extraction_confidence
+            description: "Claude API confidence score 0-1"
+
+      - name: raw_training_sessions
+        description: "Training session statistics extracted by Claude API from SwingVision screenshots"
+        config:
+          freshness:
+            warn_after: {count: 48, period: hour}
+        columns:
+          - name: session_id
+            description: "Unique session identifier parsed from filename"
+          - name: player_id
+            description: "Player first name parsed from filename"
+          - name: session_date
+            description: "Session date parsed from filename"
+          - name: extraction_confidence
+            description: "Claude API confidence score 0-1"
+
+      - name: raw_screenshots
+        description: "Screenshot metadata from SwingVision uploads"
+        columns:
+          - name: session_id
+            description: "Session identifier parsed from filename"
+          - name: player_name
+            description: "Player name parsed from filename"

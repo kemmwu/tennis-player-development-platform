@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_player_name_mapping
+    description: >
+      Resolves player name aliases to canonical player IDs.
+      Handles case variations, nicknames, and Chinese names.
+      Sourced from a manually maintained seed file.
+      This is where domain expertise creates engineering value —
+      the mapping is maintained by the coach who knows the players.
+    columns:
+      - name: alias
+        description: "Lowercased alias as it appears in source data"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: canonical_player_id
+        description: "Resolved canonical player ID"
+        data_tests:
+          - not_null
+          
