@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: int_session_rollup_daily
+    description: >
+      Daily rollup of training sessions per player.
+      Handles multiple sessions on the same day by averaging accuracy metrics
+      and summing volume metrics. Used as the foundation for weekly and monthly
+      training trend analysis in Gold marts.
+    columns:
+      - name: player_id
+        description: "Canonical player ID"
+        data_tests:
+          - not_null
+
+      - name: session_date
+        description: "Date of training"
+        data_tests:
+          - not_null
+
+      - name: sessions_on_day
+        description: "Number of training sessions completed this day"
+        
