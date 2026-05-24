@@ -674,3 +674,41 @@ Be honest: underestimated entity resolution complexity at the start. Did not wri
 ---
 
 *Last updated: April 2026*
+
+
+## Performance & Cost Log
+
+Last updated: May 2026
+
+### Data Volume
+| Table | Row Count | Size |
+|---|---|---|
+| `bronze.raw_match_extractions` | ~6,500 | ~2 MB |
+| `bronze.raw_training_sessions` | ~12,000 | ~4 MB |
+| `bronze.raw_students` | 51 | <1 MB |
+| `silver_gold.fct_match_performance` | ~6,500 | ~3 MB |
+| `silver_gold.mart_player_development_score` | ~150 | <1 MB |
+
+### Query Performance
+| Query | Before Z-order | After Z-order | Improvement |
+|---|---|---|---|
+
+Before Z-order: 0.347s — found 1 records
+Applying Z-order on player_id and match_date...
+Z-order complete.
+After Z-order:  0.278s — found 1 records
+
+Performance improvement: 19.9%
+Z-order columns: player_id, match_date
+Use case: coach filtering by student + date range
+
+### dbt Build Times
+| Command | Duration |
+|---|---|
+| `dbt build --select staging` | ~35s |
+| `dbt build --select marts` | ~55s |
+| `dbt build` (full) | ~90s |
+
+### Databricks Cost (estimated)
+- Serverless SQL Warehouse: ~$0.05/hour
+- Monthly estimated cost: <$5 for this project scale

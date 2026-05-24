@@ -1,25 +1,24 @@
 # Databricks notebook source
 # bronze_match_stats.py
-# Ingests match statistics from Parquet in Volume into bronze.raw_match_extractions
+# Ingests synthetic match statistics from Parquet file in Volume
+# Writes to tennis_dev.bronze.raw_match_extractions
+# Uses pandas batch approach to avoid Auto Loader schema caching issues
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Bronze Ingestion: Match Stats
+# MAGIC ## Bronze Ingestion: Match Statistics (Synthetic)
 # MAGIC
 # MAGIC **Source:** `/Volumes/tennis_dev/bronze/raw_files/match_stats.parquet`
 # MAGIC **Target:** `tennis_dev.bronze.raw_match_extractions`
-# MAGIC **Pattern:** Auto Loader · file hash dedup · append-only
+# MAGIC **Pattern:** Pandas batch read · type casting · dedup by match_id · append
 
 # COMMAND ----------
 
+import pandas as pd
 from datetime import datetime
 from pyspark.sql import functions as F
-from pyspark.sql.types import (
-    StructType, StructField,
-    StringType, DoubleType, IntegerType,
-    BooleanType
-)
+from pyspark.sql.types import DateType, DoubleType, LongType, StringType, BooleanType
 
 # COMMAND ----------
 
@@ -28,180 +27,135 @@ CATALOG          = "tennis_dev"
 SCHEMA           = "bronze"
 TABLE            = "raw_match_extractions"
 FULL_TABLE       = f"{CATALOG}.{SCHEMA}.{TABLE}"
-
-SOURCE_PATH      = f"/Volumes/{CATALOG}/{SCHEMA}/raw_files/"
-CHECKPOINT_PATH  = f"/Volumes/{CATALOG}/{SCHEMA}/checkpoints/match_stats/"
-PIPELINE_VERSION = "v1.0"
+SOURCE_FILE      = f"/Volumes/{CATALOG}/{SCHEMA}/raw_files/match_stats.parquet"
+PIPELINE_VERSION = "v2.0"
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
-# ── SCHEMA DEFINITION ─────────────────────────────────────────────
-match_schema = StructType([
-    StructField("match_id",               StringType(),  True),
-    StructField("player_id",              StringType(),  True),
-    StructField("match_date",             StringType(),  True),
-    StructField("opponent_name",          StringType(),  True),
-    StructField("opponent_utr",           DoubleType(),  True),
-    StructField("tournament_name",        StringType(),  True),
-    StructField("surface",                StringType(),  True),
-    StructField("serves_in_ad",           DoubleType(),  True),
-    StructField("serves_in_deuce",        DoubleType(),  True),
-    StructField("avg_serve_speed",        IntegerType(), True),
-    StructField("max_serve_speed",        IntegerType(), True),
-    StructField("returns_in_ad",          DoubleType(),  True),
-    StructField("returns_in_deuce",       DoubleType(),  True),
-    StructField("avg_return_speed",       IntegerType(), True),
-    StructField("max_return_speed",       IntegerType(), True),
-    StructField("total_moving_distance",  DoubleType(),  True),
-    StructField("winners",                IntegerType(), True),
-    StructField("unforced_errors",        IntegerType(), True),
-    StructField("break_points_won",       IntegerType(), True),
-    StructField("break_points_total",     IntegerType(), True),
-    StructField("avg_rally_length",       DoubleType(),  True),
-    StructField("player_won",             BooleanType(), True),
-    StructField("score",                  StringType(),  True),
-    StructField("raw_note_text",          StringType(),  True),
-    StructField("source_file",            StringType(),  True),
-    StructField("extraction_confidence",  DoubleType(),  True),
-    StructField("prompt_version",         StringType(),  True),
-    StructField("ingested_at",            StringType(),  True),
-])
+# ── STEP 1: READ WITH PANDAS ──────────────────────────────────────
+print(f"[{datetime.now()}] Reading {SOURCE_FILE}")
+pdf = pd.read_parquet(SOURCE_FILE)
+print(f"Parquet rows: {len(pdf):,}")
+print(f"Parquet columns: {list(pdf.columns)}")
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
-# ── STEP 1: READ WITH AUTO LOADER ─────────────────────────────────
-print(f"[{datetime.now()}] Reading from {SOURCE_PATH}")
+# ── STEP 2: CREATE SPARK DATAFRAME ────────────────────────────────
+df = spark.createDataFrame(pdf)
+# ──────────────────────────────────────────────────────────────────
 
-raw_df = (
-    spark.readStream
-    .format("cloudFiles")
-    .option("cloudFiles.format", "parquet")
-    .option("cloudFiles.schemaLocation", CHECKPOINT_PATH + "schema/")
-    .option("pathGlobFilter", "match_stats.parquet")
-    .load(SOURCE_PATH)
+# COMMAND ----------
+
+# ── STEP 3: CAST COLUMNS TO CORRECT TYPES ────────────────────────
+df = (
+    df
+    .withColumn("match_date",    F.col("match_date").cast(DateType()))
+    .withColumn("winners",       F.col("winners").cast(LongType()))
+    .withColumn("unforced_errors", F.col("unforced_errors").cast(LongType()))
+    .withColumn("forehand_winners", F.col("forehand_winners").cast(LongType()))
+    .withColumn("forehand_unforced_errors", F.col("forehand_unforced_errors").cast(LongType()))
+    .withColumn("backhand_winners", F.col("backhand_winners").cast(LongType()))
+    .withColumn("backhand_unforced_errors", F.col("backhand_unforced_errors").cast(LongType()))
+    .withColumn("total_points_won", F.col("total_points_won").cast(LongType()))
+    .withColumn("total_points_played", F.col("total_points_played").cast(LongType()))
+    .withColumn("break_points_won", F.col("break_points_won").cast(LongType()))
+    .withColumn("break_points_total", F.col("break_points_total").cast(LongType()))
+    .withColumn("break_points_saved", F.col("break_points_saved").cast(LongType()))
+    .withColumn("break_points_saved_total", F.col("break_points_saved_total").cast(LongType()))
+    .withColumn("aces",          F.col("aces").cast(LongType()))
+    .withColumn("service_winners", F.col("service_winners").cast(LongType()))
+    .withColumn("double_faults", F.col("double_faults").cast(LongType()))
+    .withColumn("first_serves_in", F.col("first_serves_in").cast(LongType()))
+    .withColumn("first_serves_total", F.col("first_serves_total").cast(LongType()))
+    .withColumn("second_serves_in", F.col("second_serves_in").cast(LongType()))
+    .withColumn("second_serves_total", F.col("second_serves_total").cast(LongType()))
+    .withColumn("serve_points_won", F.col("serve_points_won").cast(LongType()))
+    .withColumn("serve_points_total", F.col("serve_points_total").cast(LongType()))
+    .withColumn("first_serves_won", F.col("first_serves_won").cast(LongType()))
+    .withColumn("first_serves_won_total", F.col("first_serves_won_total").cast(LongType()))
+    .withColumn("second_serves_won", F.col("second_serves_won").cast(LongType()))
+    .withColumn("second_serves_won_total", F.col("second_serves_won_total").cast(LongType()))
+    .withColumn("return_points_won", F.col("return_points_won").cast(LongType()))
+    .withColumn("return_points_total", F.col("return_points_total").cast(LongType()))
+    .withColumn("first_returns_won", F.col("first_returns_won").cast(LongType()))
+    .withColumn("first_returns_total", F.col("first_returns_total").cast(LongType()))
+    .withColumn("second_returns_won", F.col("second_returns_won").cast(LongType()))
+    .withColumn("second_returns_total", F.col("second_returns_total").cast(LongType()))
+    .withColumn("rallies_1_4_won", F.col("rallies_1_4_won").cast(LongType()))
+    .withColumn("rallies_1_4_total", F.col("rallies_1_4_total").cast(LongType()))
+    .withColumn("rallies_5_8_won", F.col("rallies_5_8_won").cast(LongType()))
+    .withColumn("rallies_5_8_total", F.col("rallies_5_8_total").cast(LongType()))
+    .withColumn("rallies_9plus_won", F.col("rallies_9plus_won").cast(LongType()))
+    .withColumn("rallies_9plus_total", F.col("rallies_9plus_total").cast(LongType()))
+    .withColumn("pages_processed", F.col("pages_processed").cast(LongType()))
+    .withColumn("extraction_confidence", F.col("extraction_confidence").cast(DoubleType()))
+    .withColumn("player_won",     F.col("player_won").cast(BooleanType()))
 )
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
-# ── STEP 2: ADD METADATA COLUMNS ──────────────────────────────────
-enriched_df = (
-    raw_df
-    .withColumn("_source_file",      F.col("_metadata.file_path"))
-    .withColumn("_ingested_at",      F.current_timestamp())
+# ── STEP 4: ADD METADATA COLUMNS ─────────────────────────────────
+df = (
+    df
+    .withColumn("_source_file",      F.lit(SOURCE_FILE))
+    .withColumn("_record_hash",      F.sha2(F.col("match_id"), 256))
     .withColumn("_pipeline_version", F.lit(PIPELINE_VERSION))
-    .withColumn("_record_hash",      F.sha2(F.col("_metadata.file_path"), 256))
 )
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
-# ── STEP 3: DATA QUALITY ASSERTIONS ───────────────────────────────
-validated_df = (
-    enriched_df
+# ── STEP 5: QUALITY FILTER ────────────────────────────────────────
+df = (
+    df
     .filter(F.col("match_id").isNotNull())
     .filter(F.col("player_id").isNotNull())
     .filter(F.col("match_date").isNotNull())
-    .filter(
-        F.col("serves_in_ad").isNull() |
-        F.col("serves_in_ad").between(0.0, 1.0)
-    )
-    .filter(
-        F.col("serves_in_deuce").isNull() |
-        F.col("serves_in_deuce").between(0.0, 1.0)
-    )
-    .filter(
-        F.col("winners").isNull() |
-        (F.col("winners") >= 0)
-    )
-    .filter(
-        F.col("unforced_errors").isNull() |
-        (F.col("unforced_errors") >= 0)
-    )
+    .filter(F.col("winners") >= 0)
+    .filter(F.col("unforced_errors") >= 0)
 )
-
-print("Data quality filters applied.")
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
-# ── STEP 4: WRITE TO BRONZE DELTA TABLE ───────────────────────────
-def upsert_to_bronze(batch_df, batch_id):
-    if batch_df.count() == 0:
-        print(f"Batch {batch_id}: empty, skipping.")
-        return
+# ── STEP 6: DEDUPLICATE AGAINST EXISTING TABLE ────────────────────
+table_exists = spark.catalog.tableExists(FULL_TABLE)
 
-    table_exists = spark.catalog.tableExists(FULL_TABLE)
+if not table_exists:
+    print(f"Table does not exist — creating {FULL_TABLE}")
+    df.write \
+        .format("delta") \
+        .mode("overwrite") \
+        .option("overwriteSchema", "true") \
+        .saveAsTable(FULL_TABLE)
+else:
+    existing  = spark.table(FULL_TABLE).select("match_id").distinct()
+    new_rows  = df.join(existing, on="match_id", how="left_anti")
+    count     = new_rows.count()
+    print(f"New rows to insert: {count:,}")
 
-    if not table_exists:
-        print(f"Batch {batch_id}: creating table {FULL_TABLE}")
-        (
-            batch_df
-            .write
-            .format("delta")
-            .mode("overwrite")
-            .option("overwriteSchema", "true")
-            .partitionBy("player_id")
+    if count > 0:
+        new_rows.write \
+            .format("delta") \
+            .mode("append") \
+            .option("mergeSchema", "true") \
             .saveAsTable(FULL_TABLE)
-        )
+        print(f"Insert complete.")
     else:
-        existing_ids = (
-            spark.table(FULL_TABLE)
-            .select("match_id")
-            .distinct()
-        )
-        new_records = batch_df.join(
-            existing_ids,
-            on="match_id",
-            how="left_anti"
-        )
-        count = new_records.count()
-        if count > 0:
-            print(f"Batch {batch_id}: inserting {count} new records")
-            (
-                new_records
-                .write
-                .format("delta")
-                .mode("append")
-                .saveAsTable(FULL_TABLE)
-            )
-        else:
-            print(f"Batch {batch_id}: no new records to insert")
-
-
-query = (
-    validated_df
-    .writeStream
-    .foreachBatch(upsert_to_bronze)
-    .option("checkpointLocation", CHECKPOINT_PATH)
-    .trigger(availableNow=True)
-    .start()
-)
-
-query.awaitTermination()
-print(f"[{datetime.now()}] Streaming query complete.")
+        print("No new records — table already up to date.")
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
-# ── STEP 5: VERIFY ────────────────────────────────────────────────
+# ── STEP 7: VERIFY ────────────────────────────────────────────────
 result = spark.table(FULL_TABLE)
-count  = result.count()
-
-print("\n── bronze.raw_match_extractions ─────────────────")
-print(f"Total rows:      {count:,}")
+print(f"\n── bronze.raw_match_extractions ──────────────────")
+print(f"Total rows:      {result.count():,}")
 print(f"Unique players:  {result.select('player_id').distinct().count():,}")
 print(f"Unique matches:  {result.select('match_id').distinct().count():,}")
-result.groupBy("surface").count().orderBy("surface").show()
-# ──────────────────────────────────────────────────────────────────
-
-# COMMAND ----------
-
-# ── STEP 6: IDEMPOTENCY TEST ──────────────────────────────────────
-print("Idempotency check:")
-print(f"  Total rows:    {spark.table(FULL_TABLE).count():,}")
-print(f"  Unique IDs:    {spark.table(FULL_TABLE).select('match_id').distinct().count():,}")
-print("  If equal, deduplication is working correctly.")
+print(f"Date range:      {result.agg(F.min('match_date'), F.max('match_date')).collect()[0]}")
+result.groupBy("prompt_version").count().orderBy("count", ascending=False).show()
 # ──────────────────────────────────────────────────────────────────
