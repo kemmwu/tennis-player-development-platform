@@ -379,3 +379,48 @@ no single component dominates due to scale differences.
 ### What I Would Do Differently
 Add a momentum component tracking score trajectory over time,
 not just the absolute score for the week.
+
+---
+
+## Decision 12: Synthetic Data Strategy
+
+**Date:** May 2026
+**Status:** Decided
+
+### Context
+The project needed sufficient data volume to demonstrate window functions,
+partitioning, Z-ordering, and incremental model behavior. Real data
+(9 sessions from 4 students) is insufficient for this.
+
+### Decision
+Generate 3 years of realistic synthetic data covering 50 students,
+~6,500 matches, and ~12,000 training sessions using Python Faker.
+Clearly documented as synthetic in README — this is an engineering
+integrity choice, not a flaw.
+
+### Why This Is Acceptable
+Every data engineering portfolio project faces this problem. The
+engineering patterns (incremental models, Z-ordering, partitioning)
+are identical regardless of whether the data is real or synthetic.
+Interviewers understand this.
+
+---
+
+## Decision 13: Schema Naming Convention (silver_gold vs gold)
+
+**Date:** May 2026
+**Status:** Known limitation
+
+### Context
+dbt appends custom schema names to the target schema in profiles.yml.
+With target schema = silver, models configured with +schema: gold
+land in silver_gold instead of gold.
+
+### Decision
+Kept silver_gold for dbt-managed tables. Manually created tables
+(extraction_eval_set, llm_quality_findings) remain in gold.
+This inconsistency is documented here and in Known Limitations.
+
+### What I Would Do Differently
+Set target schema to an empty string or tennis_dev in profiles.yml
+from day one so all schemas land exactly where configured.

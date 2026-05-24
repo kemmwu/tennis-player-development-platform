@@ -1,24 +1,24 @@
 # Databricks notebook source
 # bronze_training_sessions.py
-# Ingests training sessions from Parquet in Volume into bronze.raw_training_sessions
+# Ingests synthetic training session statistics from Parquet file in Volume
+# Writes to tennis_dev.bronze.raw_training_sessions
+# Uses pandas batch approach to avoid Auto Loader schema caching issues
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Bronze Ingestion: Training Sessions
+# MAGIC ## Bronze Ingestion: Training Sessions (Synthetic)
 # MAGIC
 # MAGIC **Source:** `/Volumes/tennis_dev/bronze/raw_files/training_sessions.parquet`
 # MAGIC **Target:** `tennis_dev.bronze.raw_training_sessions`
-# MAGIC **Pattern:** Auto Loader · file hash dedup · append-only
+# MAGIC **Pattern:** Pandas batch read · type casting · dedup by session_id · append
 
 # COMMAND ----------
 
+import pandas as pd
 from datetime import datetime
 from pyspark.sql import functions as F
-from pyspark.sql.types import (
-    StructType, StructField,
-    StringType, DoubleType, IntegerType
-)
+from pyspark.sql.types import DateType, DoubleType, LongType, BooleanType
 
 # COMMAND ----------
 
@@ -27,181 +27,90 @@ CATALOG          = "tennis_dev"
 SCHEMA           = "bronze"
 TABLE            = "raw_training_sessions"
 FULL_TABLE       = f"{CATALOG}.{SCHEMA}.{TABLE}"
-
-SOURCE_PATH      = f"/Volumes/{CATALOG}/{SCHEMA}/raw_files/"
-CHECKPOINT_PATH  = f"/Volumes/{CATALOG}/{SCHEMA}/checkpoints/training_sessions/"
-PIPELINE_VERSION = "v1.0"
+SOURCE_FILE      = f"/Volumes/{CATALOG}/{SCHEMA}/raw_files/training_sessions.parquet"
+PIPELINE_VERSION = "v2.0"
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
-# ── SCHEMA DEFINITION ─────────────────────────────────────────────
-session_schema = StructType([
-    StructField("session_id",                       StringType(),  True),
-    StructField("player_id",                        StringType(),  True),
-    StructField("session_date",                     StringType(),  True),
-    StructField("session_type",                     StringType(),  True),
-    StructField("drills_completed",                 StringType(),  True),
-    StructField("raw_note_text",                    StringType(),  True),
-    StructField("avg_heart_rate",                   IntegerType(), True),
-    StructField("ingested_at",                      StringType(),  True),
-    StructField("shots_in",                         DoubleType(),  True),
-    StructField("longest_rally",                    IntegerType(), True),
-    StructField("rallies_above_5_shots",            DoubleType(),  True),
-    StructField("forehand_cross_court_in",          DoubleType(),  True),
-    StructField("forehand_down_the_line_in",        DoubleType(),  True),
-    StructField("forehand_avg_cross_court_speed",   IntegerType(), True),
-    StructField("forehand_avg_down_the_line_speed", IntegerType(), True),
-    StructField("forehand_cross_court_deep",        DoubleType(),  True),
-    StructField("forehand_down_the_line_deep",      DoubleType(),  True),
-    StructField("backhand_cross_court_in",          DoubleType(),  True),
-    StructField("backhand_down_the_line_in",        DoubleType(),  True),
-    StructField("backhand_avg_cross_court_speed",   IntegerType(), True),
-    StructField("backhand_avg_down_the_line_speed", IntegerType(), True),
-    StructField("backhand_cross_court_deep",        DoubleType(),  True),
-    StructField("backhand_down_the_line_deep",      DoubleType(),  True),
-    StructField("avg_ball_speed",                   DoubleType(),  True),
-    StructField("max_ball_speed",                   DoubleType(),  True),
-])
+# ── STEP 1: READ REAL DATA TO PRESERVE ───────────────────────────
+real_data = spark.table(FULL_TABLE).filter(
+    F.col("prompt_version") != "synthetic"
+)
+print(f"Real rows to preserve: {real_data.count()}")
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
-# ── STEP 1: READ WITH AUTO LOADER ─────────────────────────────────
-print(f"[{datetime.now()}] Reading from {SOURCE_PATH}")
+# ── STEP 2: READ SYNTHETIC PARQUET WITH PANDAS ───────────────────
+print(f"[{datetime.now()}] Reading {SOURCE_FILE}")
+pdf = pd.read_parquet(SOURCE_FILE)
+print(f"Parquet rows: {len(pdf):,}")
+# ──────────────────────────────────────────────────────────────────
 
-raw_df = (
-    spark.readStream
-    .format("cloudFiles")
-    .option("cloudFiles.format", "parquet")
-    .option("cloudFiles.schemaLocation", CHECKPOINT_PATH + "schema/")
-    .option("pathGlobFilter", "training_sessions.parquet")
-    .load(SOURCE_PATH)
+# COMMAND ----------
+
+# ── STEP 3: CREATE SPARK DATAFRAME + CAST TYPES ──────────────────
+syn_data = spark.createDataFrame(pdf)
+
+syn_data = (
+    syn_data
+    .withColumn("session_date",                     F.col("session_date").cast(DateType()))
+    .withColumn("shots_in",                         F.col("shots_in").cast(DoubleType()))
+    .withColumn("shots_per_hour",                   F.col("shots_per_hour").cast(LongType()))
+    .withColumn("longest_rally",                    F.col("longest_rally").cast(LongType()))
+    .withColumn("rallies_above_5_shots",            F.col("rallies_above_5_shots").cast(DoubleType()))
+    .withColumn("serves_in_ad",                     F.col("serves_in_ad").cast(DoubleType()))
+    .withColumn("serves_in_deuce",                  F.col("serves_in_deuce").cast(DoubleType()))
+    .withColumn("avg_serve_speed_ad",               F.col("avg_serve_speed_ad").cast(LongType()))
+    .withColumn("avg_serve_speed_deuce",            F.col("avg_serve_speed_deuce").cast(LongType()))
+    .withColumn("returns_in_ad",                    F.col("returns_in_ad").cast(DoubleType()))
+    .withColumn("returns_in_deuce",                 F.col("returns_in_deuce").cast(DoubleType()))
+    .withColumn("avg_return_speed_ad",              F.col("avg_return_speed_ad").cast(LongType()))
+    .withColumn("avg_return_speed_deuce",           F.col("avg_return_speed_deuce").cast(LongType()))
+    .withColumn("forehand_cross_court_in",          F.col("forehand_cross_court_in").cast(DoubleType()))
+    .withColumn("forehand_down_the_line_in",        F.col("forehand_down_the_line_in").cast(DoubleType()))
+    .withColumn("forehand_avg_cross_court_speed",   F.col("forehand_avg_cross_court_speed").cast(LongType()))
+    .withColumn("forehand_avg_down_the_line_speed", F.col("forehand_avg_down_the_line_speed").cast(LongType()))
+    .withColumn("forehand_cross_court_deep",        F.col("forehand_cross_court_deep").cast(DoubleType()))
+    .withColumn("forehand_down_the_line_deep",      F.col("forehand_down_the_line_deep").cast(DoubleType()))
+    .withColumn("backhand_cross_court_in",          F.col("backhand_cross_court_in").cast(DoubleType()))
+    .withColumn("backhand_down_the_line_in",        F.col("backhand_down_the_line_in").cast(DoubleType()))
+    .withColumn("backhand_avg_cross_court_speed",   F.col("backhand_avg_cross_court_speed").cast(LongType()))
+    .withColumn("backhand_avg_down_the_line_speed", F.col("backhand_avg_down_the_line_speed").cast(LongType()))
+    .withColumn("backhand_cross_court_deep",        F.col("backhand_cross_court_deep").cast(DoubleType()))
+    .withColumn("backhand_down_the_line_deep",      F.col("backhand_down_the_line_deep").cast(DoubleType()))
+    .withColumn("pages_processed",                  F.col("pages_processed").cast(LongType()))
+    .withColumn("extraction_confidence",            F.col("extraction_confidence").cast(DoubleType()))
+    .withColumn("_source_file",                     F.lit(SOURCE_FILE))
+    .withColumn("_record_hash",                     F.sha2(F.col("session_id"), 256))
+    .withColumn("_pipeline_version",                F.lit(PIPELINE_VERSION))
 )
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
-# ── STEP 2: ADD METADATA COLUMNS ──────────────────────────────────
-enriched_df = (
-    raw_df
-    .withColumn("_source_file",      F.col("_metadata.file_path"))
-    .withColumn("_ingested_at",      F.current_timestamp())
-    .withColumn("_pipeline_version", F.lit(PIPELINE_VERSION))
-    .withColumn("_record_hash",      F.sha2(F.col("_metadata.file_path"), 256))
-)
-# ──────────────────────────────────────────────────────────────────
+# ── STEP 4: COMBINE REAL + SYNTHETIC AND OVERWRITE ───────────────
+combined = real_data.unionByName(syn_data, allowMissingColumns=True)
+print(f"Combined rows: {combined.count():,}")
 
-# COMMAND ----------
+combined.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .option("overwriteSchema", "true") \
+    .saveAsTable(FULL_TABLE)
 
-# ── STEP 3: DATA QUALITY ASSERTIONS ───────────────────────────────
-validated_df = (
-    enriched_df
-    .filter(F.col("session_id").isNotNull())
-    .filter(F.col("player_id").isNotNull())
-    .filter(F.col("session_date").isNotNull())
-    .filter(
-        F.col("shots_in").isNull() |
-        F.col("shots_in").between(0.0, 1.0)
-    )
-    .filter(
-        F.col("forehand_cross_court_in").isNull() |
-        F.col("forehand_cross_court_in").between(0.0, 1.0)
-    )
-    .filter(
-        F.col("backhand_cross_court_in").isNull() |
-        F.col("backhand_cross_court_in").between(0.0, 1.0)
-    )
-    .filter(
-        F.col("longest_rally").isNull() |
-        (F.col("longest_rally") >= 0)
-    )
-    .filter(
-        F.col("avg_heart_rate").isNull() |
-        F.col("avg_heart_rate").between(50, 220)
-    )
-)
-
-print("Data quality filters applied.")
-# ──────────────────────────────────────────────────────────────────
-
-# COMMAND ----------
-
-# ── STEP 4: WRITE TO BRONZE DELTA TABLE ───────────────────────────
-def upsert_to_bronze(batch_df, batch_id):
-    if batch_df.count() == 0:
-        print(f"Batch {batch_id}: empty, skipping.")
-        return
-
-    table_exists = spark.catalog.tableExists(FULL_TABLE)
-
-    if not table_exists:
-        print(f"Batch {batch_id}: creating table {FULL_TABLE}")
-        (
-            batch_df
-            .write
-            .format("delta")
-            .mode("overwrite")
-            .option("overwriteSchema", "true")
-            .partitionBy("player_id")
-            .saveAsTable(FULL_TABLE)
-        )
-    else:
-        existing_ids = (
-            spark.table(FULL_TABLE)
-            .select("session_id")
-            .distinct()
-        )
-        new_records = batch_df.join(
-            existing_ids,
-            on="session_id",
-            how="left_anti"
-        )
-        count = new_records.count()
-        if count > 0:
-            print(f"Batch {batch_id}: inserting {count} new records")
-            (
-                new_records
-                .write
-                .format("delta")
-                .mode("append")
-                .saveAsTable(FULL_TABLE)
-            )
-        else:
-            print(f"Batch {batch_id}: no new records to insert")
-
-
-query = (
-    validated_df
-    .writeStream
-    .foreachBatch(upsert_to_bronze)
-    .option("checkpointLocation", CHECKPOINT_PATH)
-    .trigger(availableNow=True)
-    .start()
-)
-
-query.awaitTermination()
-print(f"[{datetime.now()}] Streaming query complete.")
+print("Overwrite complete.")
 # ──────────────────────────────────────────────────────────────────
 
 # COMMAND ----------
 
 # ── STEP 5: VERIFY ────────────────────────────────────────────────
 result = spark.table(FULL_TABLE)
-count  = result.count()
-
-print("\n── bronze.raw_training_sessions ─────────────────")
-print(f"Total rows:      {count:,}")
+print(f"\n── bronze.raw_training_sessions ──────────────────")
+print(f"Total rows:      {result.count():,}")
 print(f"Unique players:  {result.select('player_id').distinct().count():,}")
 print(f"Unique sessions: {result.select('session_id').distinct().count():,}")
-result.groupBy("session_type").count().orderBy("count", ascending=False).show()
-# ──────────────────────────────────────────────────────────────────
-
-# COMMAND ----------
-
-# ── STEP 6: IDEMPOTENCY TEST ──────────────────────────────────────
-print("Idempotency check:")
-print(f"  Total rows:    {spark.table(FULL_TABLE).count():,}")
-print(f"  Unique IDs:    {spark.table(FULL_TABLE).select('session_id').distinct().count():,}")
-print("  If equal, deduplication is working correctly.")
+print(f"Date range:      {result.agg(F.min('session_date'), F.max('session_date')).collect()[0]}")
+result.groupBy("prompt_version").count().orderBy("count", ascending=False).show()
 # ──────────────────────────────────────────────────────────────────

@@ -1,202 +1,209 @@
-import uuid
+"""
+generate_matches.py
+Generates synthetic match statistics matching the current Bronze schema.
+Based on real SwingVision match screenshot fields.
+"""
+
 import random
+from datetime import date, timedelta
+
 import pandas as pd
 from faker import Faker
-from datetime import date, timedelta
-from pathlib import Path
 
 fake = Faker()
-random.seed(42)
 
-# ── CONFIG ────────────────────────────────────────────────────────
-OUTPUT_DIR  = Path(__file__).parent.parent / "data" / "synthetic"
-OUTPUT_FILE = OUTPUT_DIR / "match_stats.parquet"
-START_DATE  = date(2024, 1, 1)
-END_DATE    = date(2025, 12, 31)
-# ─────────────────────────────────────────────────────────────────
+# ── CONFIGURATION ─────────────────────────────────────────────────
+NUM_STUDENTS      = 50
+YEARS_OF_DATA     = 3
+MATCHES_PER_YEAR  = 40        # per student → ~6,000 total records
+OUTPUT_FILE       = "data/match_stats.parquet"
+START_DATE        = date(2023, 1, 1)
+END_DATE          = date(2025, 12, 31)
+RANDOM_SEED       = 42
+# ──────────────────────────────────────────────────────────────────
 
-SURFACES      = ["hard", "clay", "grass", "carpet"]
-SURFACE_WEIGHTS = [0.55, 0.25, 0.10, 0.10]
-TOURNAMENTS   = [
-    "USTA Junior Circuit",
-    "Local Club Championship",
-    "Sectional Qualifier",
-    "City Open",
-    "Regional Junior Open",
-    "Adult League Finals",
-    "Club Round Robin",
-    "Friendly Match",
+random.seed(RANDOM_SEED)
+fake.seed_instance(RANDOM_SEED)
+
+FIRST_NAMES = [
+    "alex", "tim", "jessica", "michael", "sarah", "kevin", "emily",
+    "ryan", "lisa", "daniel", "natalie", "james", "sophia", "andrew",
+    "grace", "david", "olivia", "jason", "madison", "christopher",
+    "ashley", "matthew", "hannah", "brandon", "samantha", "tyler",
+    "rachel", "austin", "lauren", "dylan", "megan", "jordan",
+    "brittany", "zachary", "kayla", "nicholas", "amanda", "caleb",
+    "stephanie", "nathan", "jessica", "aaron", "chelsea", "adam",
+    "allison", "eric", "vanessa", "sean", "heather", "kyle",
 ]
 
-
-def utr_to_serve_speed(utr: float) -> tuple[int, int]:
-    """Higher UTR = faster serves on average."""
-    base_avg = int(90 + utr * 5)
-    base_max = int(base_avg + random.randint(15, 35))
-    noise_avg = random.randint(-8, 8)
-    noise_max = random.randint(-5, 5)
-    return base_avg + noise_avg, base_max + noise_max
+SURFACES    = ["hard", "clay", "grass", "carpet"]
+TIME_SLOTS  = ["0900", "1000", "1100", "1300", "1400", "1500",
+               "1600", "1700", "1800", "1900"]
 
 
-def utr_to_accuracy(utr: float, base_low: float, base_high: float) -> float:
-    """Higher UTR = better accuracy, with realistic noise."""
-    scale  = (utr / 16.0)
-    value  = base_low + scale * (base_high - base_low)
-    noise  = random.uniform(-0.05, 0.05)
-    return round(min(max(value + noise, 0.0), 1.0), 3)
+def random_date(start: date, end: date) -> date:
+    delta = (end - start).days
+    return start + timedelta(days=random.randint(0, delta))
 
 
-def improvement_factor(match_date: date) -> float:
-    """Students improve gradually over 2 years."""
-    days_in = (match_date - START_DATE).days
-    total   = (END_DATE - START_DATE).days
-    return days_in / total * 0.08   # up to 8% improvement over 2 years
+def generate_match(student_name: str, match_date: date,
+                   session_time: str) -> dict:
+    """Generate one realistic match record."""
 
+    # Skill level affects stats
+    skill = random.uniform(0.4, 0.9)
 
-def win_probability(player_utr: float, opponent_utr: float) -> float:
-    """UTR difference predicts win probability."""
-    diff = player_utr - opponent_utr
-    # Sigmoid-like: each UTR point = ~15% swing
-    prob = 0.5 + diff * 0.15
-    return min(max(prob, 0.05), 0.95)
+    # Serve stats (raw counts)
+    first_serves_total    = random.randint(30, 60)
+    first_serves_in       = int(first_serves_total * random.uniform(0.45, 0.75))
+    second_serves_total   = first_serves_total - first_serves_in
+    second_serves_in      = int(second_serves_total * random.uniform(0.65, 0.90))
 
+    serve_points_total    = first_serves_total
+    first_serves_won      = int(first_serves_in * random.uniform(0.55, 0.80))
+    second_serves_won     = int(second_serves_in * random.uniform(0.35, 0.60))
+    serve_points_won      = first_serves_won + second_serves_won
 
-def generate_score(player_won: bool) -> str:
-    """Generate a realistic tennis score string."""
-    if player_won:
-        patterns = [
-            "6-4 6-3", "6-3 6-2", "7-5 6-4", "6-4 7-5",
-            "6-2 6-4", "6-1 6-3", "7-6 6-4", "6-4 6-4",
-            "6-3 3-6 6-4", "7-5 4-6 6-3", "6-4 6-7 6-3",
-        ]
-    else:
-        patterns = [
-            "4-6 3-6", "3-6 2-6", "5-7 4-6", "4-6 5-7",
-            "4-6 3-6", "1-6 3-6", "4-7 4-6", "4-6 4-6",
-            "4-6 6-3 4-6", "5-7 6-4 3-6", "4-6 7-6 3-6",
-        ]
-    return random.choice(patterns)
+    first_serves_won_total  = first_serves_in
+    second_serves_won_total = second_serves_in
 
+    # Return stats
+    return_points_total   = random.randint(28, 55)
+    return_points_won     = int(return_points_total * random.uniform(0.30, 0.65))
+    first_returns_total   = int(return_points_total * 0.55)
+    first_returns_won     = int(first_returns_total * random.uniform(0.25, 0.55))
+    second_returns_total  = return_points_total - first_returns_total
+    second_returns_won    = int(second_returns_total * random.uniform(0.40, 0.70))
 
-def generate_match(student: dict, match_date: date) -> dict:
-    utr      = student["utr_rating"]
-    improve  = improvement_factor(match_date)
-    eff_utr  = utr * (1 + improve)   # effective UTR on that date
+    # Point stats
+    total_points_played   = serve_points_total + return_points_total
+    total_points_won      = serve_points_won + return_points_won
 
-    # Opponent: within ±2.5 UTR of player
-    opp_utr  = round(max(1.0, eff_utr + random.uniform(-2.5, 2.5)), 1)
-    opp_name = fake.name()
+    winners               = int(random.gauss(15 * skill, 5))
+    unforced_errors       = int(random.gauss(20 * (1 - skill * 0.5), 6))
+    forehand_winners      = int(winners * random.uniform(0.55, 0.70))
+    backhand_winners      = winners - forehand_winners
+    forehand_unforced     = int(unforced_errors * random.uniform(0.45, 0.65))
+    backhand_unforced     = unforced_errors - forehand_unforced
 
-    avg_spd, max_spd   = utr_to_serve_speed(eff_utr)
-    avg_ret, max_ret   = utr_to_serve_speed(eff_utr * 0.85)
+    # Break points
+    bp_total              = random.randint(2, 10)
+    bp_won                = int(bp_total * random.uniform(0.25, 0.65))
+    bp_saved_total        = random.randint(1, 8)
+    bp_saved              = int(bp_saved_total * random.uniform(0.30, 0.75))
 
-    player_won = random.random() < win_probability(eff_utr, opp_utr)
+    # Serve specials
+    aces                  = max(0, int(random.gauss(3 * skill, 2)))
+    service_winners       = max(0, int(random.gauss(4 * skill, 2)))
+    double_faults         = max(0, int(random.gauss(3 * (1 - skill * 0.5), 2)))
 
-    # Winners and errors: better UTR = more winners, fewer errors
-    winners = int(max(1, random.gauss(8 + eff_utr * 1.2, 4)))
-    errors  = int(max(1, random.gauss(25 - eff_utr * 1.0, 6)))
+    # Rally length buckets
+    rallies_1_4_total     = random.randint(30, 60)
+    rallies_1_4_won       = int(rallies_1_4_total * random.uniform(0.35, 0.65))
+    rallies_5_8_total     = random.randint(15, 35)
+    rallies_5_8_won       = int(rallies_5_8_total * random.uniform(0.35, 0.65))
+    rallies_9plus_total   = random.randint(3, 15)
+    rallies_9plus_won     = int(rallies_9plus_total * random.uniform(0.30, 0.70))
 
-    bp_total = random.randint(0, 8)
-    bp_won   = random.randint(0, bp_total)
+    # Match result
+    player_won            = random.random() < (0.3 + skill * 0.4)
+    sets_won              = random.randint(0, 2) if not player_won \
+        else random.randint(1, 2)
+    score                 = f"{sets_won}-{random.randint(0,1)}"
 
-    # Moving distance: longer rallies = more movement
-    avg_rally      = round(max(1.5, random.gauss(4 + eff_utr * 0.3, 1.5)), 1)
-    moving_dist    = round(avg_rally * random.uniform(120, 180), 1)
+    # Session ID from filename convention
+    session_id = (
+        f"{match_date.strftime('%Y%m%d')}"
+        f"{session_time}_{student_name}_match"
+    )
+
+    match_id = session_id
 
     return {
-        "match_id":               str(uuid.uuid4()),
-        "player_id":              student["student_id"],
-        "match_date":             match_date.isoformat(),
-        "opponent_name":          opp_name,
-        "opponent_utr":           opp_utr,
-        "tournament_name":        random.choice(TOURNAMENTS),
-        "surface":                random.choices(SURFACES, weights=SURFACE_WEIGHTS)[0],
-        "serves_in_ad":           utr_to_accuracy(eff_utr, 0.45, 0.75),
-        "serves_in_deuce":        utr_to_accuracy(eff_utr, 0.50, 0.80),
-        "avg_serve_speed":        avg_spd,
-        "max_serve_speed":        max_spd,
-        "returns_in_ad":          utr_to_accuracy(eff_utr, 0.40, 0.72),
-        "returns_in_deuce":       utr_to_accuracy(eff_utr, 0.45, 0.75),
-        "avg_return_speed":       avg_ret,
-        "max_return_speed":       max_ret,
-        "total_moving_distance":  moving_dist,
-        "winners":                winners,
-        "unforced_errors":        errors,
-        "break_points_won":       bp_won,
-        "break_points_total":     bp_total,
-        "avg_rally_length":       avg_rally,
-        "player_won":             player_won,
-        "score":                  generate_score(player_won),
-        "raw_note_text":          None,
-        "source_file":            None,
-        "extraction_confidence":  None,
-        "prompt_version":         None,
-        "ingested_at":            match_date.isoformat(),
+        "match_id":                 match_id,
+        "player_id":                student_name,
+        "match_date":               str(match_date),
+        "session_time":             session_time,
+        "score":                    score,
+        "player_won":               player_won,
+        "winners":                  max(0, winners),
+        "unforced_errors":          max(0, unforced_errors),
+        "forehand_winners":         max(0, forehand_winners),
+        "forehand_unforced_errors": max(0, forehand_unforced),
+        "backhand_winners":         max(0, backhand_winners),
+        "backhand_unforced_errors": max(0, backhand_unforced),
+        "total_points_won":         max(0, total_points_won),
+        "total_points_played":      max(1, total_points_played),
+        "break_points_won":         max(0, bp_won),
+        "break_points_total":       max(1, bp_total),
+        "break_points_saved":       max(0, bp_saved),
+        "break_points_saved_total": max(1, bp_saved_total),
+        "aces":                     max(0, aces),
+        "service_winners":          max(0, service_winners),
+        "double_faults":            max(0, double_faults),
+        "first_serves_in":          max(0, first_serves_in),
+        "first_serves_total":       max(1, first_serves_total),
+        "second_serves_in":         max(0, second_serves_in),
+        "second_serves_total":      max(1, second_serves_total),
+        "serve_points_won":         max(0, serve_points_won),
+        "serve_points_total":       max(1, serve_points_total),
+        "first_serves_won":         max(0, first_serves_won),
+        "first_serves_won_total":   max(1, first_serves_won_total),
+        "second_serves_won":        max(0, second_serves_won),
+        "second_serves_won_total":  max(1, second_serves_won_total),
+        "return_points_won":        max(0, return_points_won),
+        "return_points_total":      max(1, return_points_total),
+        "first_returns_won":        max(0, first_returns_won),
+        "first_returns_total":      max(1, first_returns_total),
+        "second_returns_won":       max(0, second_returns_won),
+        "second_returns_total":     max(1, second_returns_total),
+        "rallies_1_4_won":          max(0, rallies_1_4_won),
+        "rallies_1_4_total":        max(1, rallies_1_4_total),
+        "rallies_5_8_won":          max(0, rallies_5_8_won),
+        "rallies_5_8_total":        max(1, rallies_5_8_total),
+        "rallies_9plus_won":        max(0, rallies_9plus_won),
+        "rallies_9plus_total":      max(1, rallies_9plus_total),
+        "raw_note_text":            None,
+        "pages_processed":          random.randint(1, 3),
+        "source_file":              match_id,
+        "extraction_confidence":    round(random.uniform(0.82, 0.99), 2),
+        "prompt_version":           "synthetic",
+        "_ingested_at":             fake.date_time_between(
+                                        start_date=match_date
+                                    ).isoformat(),
     }
 
 
-def generate_match_schedule(student: dict) -> list[dict]:
-    """Generate a realistic match schedule for one student over 2 years."""
-    matches      = []
-    competition  = student["competition_level"]
-
-    # Competitive players play more matches
-    if competition == "competitive":
-        matches_per_month = random.randint(2, 6)
-    else:
-        matches_per_month = random.randint(0, 2)
-
-    current = START_DATE
-    while current <= END_DATE:
-        month_matches = random.randint(
-            max(0, matches_per_month - 2),
-            matches_per_month + 2
-        )
-        for _ in range(month_matches):
-            day_offset = random.randint(0, 27)
-            match_date = current + timedelta(days=day_offset)
-            if match_date <= END_DATE:
-                matches.append(generate_match(student, match_date))
-        # Move to next month
-        if current.month == 12:
-            current = date(current.year + 1, 1, 1)
-        else:
-            current = date(current.year, current.month + 1, 1)
-
-    return matches
-
-
 def main():
-    students_file = OUTPUT_DIR / "students.csv"
-    if not students_file.exists():
-        print("ERROR: students.csv not found. Run generate_students.py first.")
-        return
+    students = FIRST_NAMES[:NUM_STUDENTS]
+    records  = []
 
-    students = pd.read_csv(students_file).to_dict("records")
-    print(f"Loaded {len(students)} students")
-    print("Generating match records...")
+    print(f"Generating matches for {NUM_STUDENTS} students...")
 
-    all_matches = []
     for student in students:
-        matches = generate_match_schedule(student)
-        all_matches.extend(matches)
+        for _ in range(MATCHES_PER_YEAR * YEARS_OF_DATA):
+            match_date   = random_date(START_DATE, END_DATE)
+            session_time = random.choice(TIME_SLOTS)
+            record       = generate_match(student, match_date, session_time)
+            records.append(record)
 
-    df = pd.DataFrame(all_matches)
-    df["match_date"] = pd.to_datetime(df["match_date"])
-    df = df.sort_values("match_date").reset_index(drop=True)
+    df = pd.DataFrame(records)
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(OUTPUT_FILE, index=False, coerce_timestamps="us", allow_truncated_timestamps=True)
+    # Ensure date column is proper type
+    df["match_date"] = pd.to_datetime(df["match_date"]).dt.date
 
-    print(f"\nSaved {len(df):,} match records to {OUTPUT_FILE}")
-    print("\n── Summary ──────────────────────────────────────")
-    print(f"Date range:     {df['match_date'].min().date()} → {df['match_date'].max().date()}")
+    print(f"Generated {len(df):,} match records")
+    print(f"Date range: {df['match_date'].min()} to {df['match_date'].max()}")
     print(f"Unique players: {df['player_id'].nunique()}")
-    print(f"Win rate:       {df['player_won'].mean():.1%}")
-    print(f"Avg winners:    {df['winners'].mean():.1f}")
-    print(f"Avg errors:     {df['unforced_errors'].mean():.1f}")
-    print(f"Avg rally len:  {df['avg_rally_length'].mean():.1f} shots")
-    print("─────────────────────────────────────────────────")
+    print(f"Win rate: {df['player_won'].mean():.1%}")
+
+    df.to_parquet(
+        OUTPUT_FILE,
+        index=False,
+        coerce_timestamps="us",
+        allow_truncated_timestamps=True
+    )
+    print(f"\nSaved to {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":

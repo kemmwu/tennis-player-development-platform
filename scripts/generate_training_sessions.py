@@ -1,183 +1,205 @@
-import uuid
+"""
+generate_training_sessions.py
+Generates synthetic training session statistics matching current Bronze schema.
+Based on real SwingVision training screenshot fields.
+"""
+
 import random
-import pandas as pd
 from datetime import date, timedelta
-from pathlib import Path
 
-random.seed(123)
+import pandas as pd
+from faker import Faker
 
-# ── CONFIG ────────────────────────────────────────────────────────
-OUTPUT_DIR  = Path(__file__).parent.parent / "data" / "synthetic"
-OUTPUT_FILE = OUTPUT_DIR / "training_sessions.parquet"
-START_DATE  = date(2024, 1, 1)
-END_DATE    = date(2025, 12, 31)
-# ─────────────────────────────────────────────────────────────────
+fake = Faker()
 
-SESSION_TYPES = [
-    "Baseline Rally",
-    "Serve Practice",
-    "Volleys and Net Play",
-    "Return of Serve",
-    "Match Play",
-    "Fitness and Footwork",
-    "Slice and Drop Shot",
-    "Topspin Groundstrokes",
+# ── CONFIGURATION ─────────────────────────────────────────────────
+NUM_STUDENTS         = 50
+YEARS_OF_DATA        = 3
+SESSIONS_PER_YEAR    = 80       # per student → ~12,000 total records
+OUTPUT_FILE          = "data/training_sessions.parquet"
+START_DATE           = date(2023, 1, 1)
+END_DATE             = date(2025, 12, 31)
+RANDOM_SEED          = 42
+# ──────────────────────────────────────────────────────────────────
+
+random.seed(RANDOM_SEED)
+fake.seed_instance(RANDOM_SEED)
+
+FIRST_NAMES = [
+    "alex", "tim", "jessica", "michael", "sarah", "kevin", "emily",
+    "ryan", "lisa", "daniel", "natalie", "james", "sophia", "andrew",
+    "grace", "david", "olivia", "jason", "madison", "christopher",
+    "ashley", "matthew", "hannah", "brandon", "samantha", "tyler",
+    "rachel", "austin", "lauren", "dylan", "megan", "jordan",
+    "brittany", "zachary", "kayla", "nicholas", "amanda", "caleb",
+    "stephanie", "nathan", "jessica", "aaron", "chelsea", "adam",
+    "allison", "eric", "vanessa", "sean", "heather", "kyle",
 ]
 
-DRILLS = {
-    "Baseline Rally":          "Cross-court consistency drill · Down-the-line targets · Rally depth challenge",
-    "Serve Practice":          "First serve placement · Second serve kick · Serve and recover",
-    "Volleys and Net Play":    "Approach shot drill · Reflex volleys · Overhead smash practice",
-    "Return of Serve":         "Return positioning · Return direction control · Chip and charge",
-    "Match Play":              "Full point play · Tiebreak practice · Pressure point simulation",
-    "Fitness and Footwork":    "Cone agility drills · Split-step timing · Side shuffle ladders",
-    "Slice and Drop Shot":     "Backhand slice consistency · Drop shot placement · Defensive slice",
-    "Topspin Groundstrokes":   "Heavy topspin looping · Angle creation · High ball handling",
-}
+TIME_SLOTS = ["0800", "0900", "1000", "1100", "1300", "1400",
+              "1500", "1600", "1700", "1800", "1900"]
+
+DRILL_TYPES = [
+    "Baseline rally + serve practice",
+    "Cross-court consistency drills",
+    "Serve and return practice",
+    "Approach shot and volley",
+    "Match play simulation",
+    "Forehand and backhand targets",
+    "Serve placement drills",
+    "Net approach and finishing",
+    "Rally consistency and depth",
+    "Movement and recovery drills",
+]
 
 
-def utr_to_shot_accuracy(utr: float, base_low: float, base_high: float) -> float:
-    scale = utr / 16.0
-    value = base_low + scale * (base_high - base_low)
-    noise = random.uniform(-0.04, 0.04)
-    return round(min(max(value + noise, 0.0), 1.0), 3)
+def random_date(start: date, end: date) -> date:
+    delta = (end - start).days
+    return start + timedelta(days=random.randint(0, delta))
 
 
-def improvement_factor(session_date: date) -> float:
-    days_in = (session_date - START_DATE).days
-    total   = (END_DATE - START_DATE).days
-    return days_in / total * 0.10   # up to 10% improvement over 2 years
+def generate_training_session(student_name: str, session_date: date,
+                               session_time: str) -> dict:
+    """Generate one realistic training session record."""
 
+    # Skill level — consistent per student but varies slightly per session
+    skill = random.uniform(0.45, 0.92)
 
-def generate_session(student: dict, session_date: date) -> dict:
-    utr     = student["utr_rating"]
-    improve = improvement_factor(session_date)
-    eff_utr = utr * (1 + improve)
+    # Overall stats
+    shots_in              = round(random.uniform(0.60, 0.95), 4)
+    shots_per_hour        = random.randint(150, 400)
+    longest_rally         = random.randint(8, 45)
+    rallies_above_5_shots = round(random.uniform(0.30, 0.75), 4)
 
-    session_type = random.choice(SESSION_TYPES)
-
-    # Heart rate: fitness sessions higher, baseline lower
-    if session_type == "Fitness and Footwork":
-        avg_hr = random.randint(145, 175)
-    elif session_type == "Match Play":
-        avg_hr = random.randint(130, 165)
+    # Serve stats (nullable — only present when serves were practiced)
+    has_serve_data = random.random() > 0.3
+    if has_serve_data:
+        serves_in_ad    = round(random.uniform(0.40, 0.80), 4)
+        serves_in_deuce = round(random.uniform(0.40, 0.80), 4)
+        avg_serve_speed_ad    = random.randint(80, 140) \
+            if random.random() > 0.2 else None
+        avg_serve_speed_deuce = random.randint(80, 140) \
+            if random.random() > 0.2 else None
     else:
-        avg_hr = random.randint(110, 150)
+        serves_in_ad          = None
+        serves_in_deuce       = None
+        avg_serve_speed_ad    = None
+        avg_serve_speed_deuce = None
 
-    # Shot accuracy: correlated with UTR
-    fh_cc_in   = utr_to_shot_accuracy(eff_utr, 0.45, 0.82)
-    fh_dtl_in  = utr_to_shot_accuracy(eff_utr, 0.40, 0.78)
-    bh_cc_in   = utr_to_shot_accuracy(eff_utr, 0.42, 0.80)
-    bh_dtl_in  = utr_to_shot_accuracy(eff_utr, 0.38, 0.75)
+    # Return stats (nullable)
+    has_return_data = random.random() > 0.3
+    if has_return_data:
+        returns_in_ad    = round(random.uniform(0.50, 0.90), 4)
+        returns_in_deuce = round(random.uniform(0.50, 0.90), 4)
+        avg_return_speed_ad    = random.randint(55, 100) \
+            if random.random() > 0.2 else None
+        avg_return_speed_deuce = random.randint(55, 100) \
+            if random.random() > 0.2 else None
+    else:
+        returns_in_ad          = None
+        returns_in_deuce       = None
+        avg_return_speed_ad    = None
+        avg_return_speed_deuce = None
 
-    # Depth: harder than accuracy, slightly lower
-    fh_cc_deep  = round(fh_cc_in  * random.uniform(0.65, 0.85), 3)
-    fh_dtl_deep = round(fh_dtl_in * random.uniform(0.65, 0.85), 3)
-    bh_cc_deep  = round(bh_cc_in  * random.uniform(0.65, 0.85), 3)
-    bh_dtl_deep = round(bh_dtl_in * random.uniform(0.65, 0.85), 3)
+    # Forehand stats
+    fh_base = skill * random.uniform(0.85, 1.05)
+    forehand_cross_court_in          = round(min(0.99, fh_base * random.uniform(0.75, 0.95)), 4)
+    forehand_down_the_line_in        = round(min(0.99, fh_base * random.uniform(0.65, 0.88)), 4)
+    forehand_avg_cross_court_speed   = random.randint(38, 72)
+    forehand_avg_down_the_line_speed = random.randint(40, 75)
+    forehand_cross_court_deep        = round(min(0.99, forehand_cross_court_in * random.uniform(0.80, 0.98)), 4)
+    forehand_down_the_line_deep      = round(min(0.99, forehand_down_the_line_in * random.uniform(0.80, 0.98)), 4)
 
-    # Speeds: forehand typically faster than backhand
-    fh_cc_spd  = int(90 + eff_utr * 4 + random.randint(-10, 10))
-    fh_dtl_spd = int(fh_cc_spd + random.randint(-5, 10))
-    bh_cc_spd  = int(fh_cc_spd * 0.88 + random.randint(-8, 8))
-    bh_dtl_spd = int(bh_cc_spd + random.randint(-5, 8))
+    # Backhand stats
+    bh_base = skill * random.uniform(0.80, 1.00)
+    backhand_cross_court_in          = round(min(0.99, bh_base * random.uniform(0.72, 0.94)), 4)
+    backhand_down_the_line_in        = round(min(0.99, bh_base * random.uniform(0.62, 0.85)), 4)
+    backhand_avg_cross_court_speed   = random.randint(35, 68)
+    backhand_avg_down_the_line_speed = random.randint(36, 70)
+    backhand_cross_court_deep        = round(min(0.99, backhand_cross_court_in * random.uniform(0.80, 0.97)), 4)
+    backhand_down_the_line_deep      = round(min(0.99, backhand_down_the_line_in * random.uniform(0.80, 0.97)), 4)
 
-    # Overall session stats
-    shots_in            = utr_to_shot_accuracy(eff_utr, 0.50, 0.85)
-    longest_rally       = int(max(3, random.gauss(8 + eff_utr * 0.8, 3)))
-    rallies_above_5     = utr_to_shot_accuracy(eff_utr, 0.20, 0.55)
-    avg_ball_speed      = round(85 + eff_utr * 4 + random.uniform(-10, 10), 1)
-    max_ball_speed      = round(avg_ball_speed + random.uniform(15, 35), 1)
+    # Session ID from filename convention
+    session_id = (
+        f"{session_date.strftime('%Y%m%d')}"
+        f"{session_time}_{student_name}_training"
+    )
 
     return {
-        "session_id":                       str(uuid.uuid4()),
-        "player_id":                        student["student_id"],
-        "session_date":                     session_date.isoformat(),
-        "session_type":                     session_type,
-        "drills_completed":                 DRILLS[session_type],
+        "session_id":                       session_id,
+        "player_id":                        student_name,
+        "session_date":                     str(session_date),
+        "session_time":                     session_time,
+        "session_type":                     "training",
+        "drills_completed":                 random.choice(DRILL_TYPES),
         "raw_note_text":                    None,
-        "avg_heart_rate":                   avg_hr,
-        "ingested_at":                      session_date.isoformat(),
         "shots_in":                         shots_in,
+        "shots_per_hour":                   shots_per_hour,
         "longest_rally":                    longest_rally,
-        "rallies_above_5_shots":            rallies_above_5,
-        "forehand_cross_court_in":          fh_cc_in,
-        "forehand_down_the_line_in":        fh_dtl_in,
-        "forehand_avg_cross_court_speed":   fh_cc_spd,
-        "forehand_avg_down_the_line_speed": fh_dtl_spd,
-        "forehand_cross_court_deep":        fh_cc_deep,
-        "forehand_down_the_line_deep":      fh_dtl_deep,
-        "backhand_cross_court_in":          bh_cc_in,
-        "backhand_down_the_line_in":        bh_dtl_in,
-        "backhand_avg_cross_court_speed":   bh_cc_spd,
-        "backhand_avg_down_the_line_speed": bh_dtl_spd,
-        "backhand_cross_court_deep":        bh_cc_deep,
-        "backhand_down_the_line_deep":      bh_dtl_deep,
-        "avg_ball_speed":                   avg_ball_speed,
-        "max_ball_speed":                   max_ball_speed,
+        "rallies_above_5_shots":            rallies_above_5_shots,
+        "serves_in_ad":                     serves_in_ad,
+        "serves_in_deuce":                  serves_in_deuce,
+        "avg_serve_speed_ad":               avg_serve_speed_ad,
+        "avg_serve_speed_deuce":            avg_serve_speed_deuce,
+        "returns_in_ad":                    returns_in_ad,
+        "returns_in_deuce":                 returns_in_deuce,
+        "avg_return_speed_ad":              avg_return_speed_ad,
+        "avg_return_speed_deuce":           avg_return_speed_deuce,
+        "forehand_cross_court_in":          forehand_cross_court_in,
+        "forehand_down_the_line_in":        forehand_down_the_line_in,
+        "forehand_avg_cross_court_speed":   forehand_avg_cross_court_speed,
+        "forehand_avg_down_the_line_speed": forehand_avg_down_the_line_speed,
+        "forehand_cross_court_deep":        forehand_cross_court_deep,
+        "forehand_down_the_line_deep":      forehand_down_the_line_deep,
+        "backhand_cross_court_in":          backhand_cross_court_in,
+        "backhand_down_the_line_in":        backhand_down_the_line_in,
+        "backhand_avg_cross_court_speed":   backhand_avg_cross_court_speed,
+        "backhand_avg_down_the_line_speed": backhand_avg_down_the_line_speed,
+        "backhand_cross_court_deep":        backhand_cross_court_deep,
+        "backhand_down_the_line_deep":      backhand_down_the_line_deep,
+        "pages_processed":                  random.randint(1, 3),
+        "source_file":                      session_id,
+        "extraction_confidence":            round(random.uniform(0.82, 0.99), 2),
+        "prompt_version":                   "synthetic",
+        "_ingested_at":                     fake.date_time_between(
+                                                start_date=session_date
+                                            ).isoformat(),
     }
 
 
-def generate_session_schedule(student: dict) -> list[dict]:
-    sessions    = []
-    freq        = int(student["training_frequency_per_week"])
-
-    current = START_DATE
-    while current <= END_DATE:
-        # Generate sessions for this week
-        week_sessions = random.randint(
-            max(0, freq - 1),
-            freq + 1
-        )
-        used_days = set()
-        for _ in range(week_sessions):
-            day = random.randint(0, 6)
-            # Avoid duplicate days in same week
-            attempts = 0
-            while day in used_days and attempts < 10:
-                day = random.randint(0, 6)
-                attempts += 1
-            used_days.add(day)
-            session_date = current + timedelta(days=day)
-            if session_date <= END_DATE:
-                sessions.append(generate_session(student, session_date))
-        # Move to next week
-        current += timedelta(days=7)
-
-    return sessions
-
-
 def main():
-    students_file = OUTPUT_DIR / "students.csv"
-    if not students_file.exists():
-        print("ERROR: students.csv not found. Run generate_students.py first.")
-        return
+    students = FIRST_NAMES[:NUM_STUDENTS]
+    records  = []
 
-    students = pd.read_csv(students_file).to_dict("records")
-    print(f"Loaded {len(students)} students")
-    print("Generating training sessions...")
+    print(f"Generating training sessions for {NUM_STUDENTS} students...")
 
-    all_sessions = []
     for student in students:
-        sessions = generate_session_schedule(student)
-        all_sessions.extend(sessions)
+        for _ in range(SESSIONS_PER_YEAR * YEARS_OF_DATA):
+            session_date = random_date(START_DATE, END_DATE)
+            session_time = random.choice(TIME_SLOTS)
+            record       = generate_training_session(
+                student, session_date, session_time
+            )
+            records.append(record)
 
-    df = pd.DataFrame(all_sessions)
-    df["session_date"] = pd.to_datetime(df["session_date"])
-    df = df.sort_values("session_date").reset_index(drop=True)
+    df = pd.DataFrame(records)
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(OUTPUT_FILE, index=False, coerce_timestamps="us", allow_truncated_timestamps=True)
+    # Ensure date column is proper type
+    df["session_date"] = pd.to_datetime(df["session_date"]).dt.date
 
-    print(f"\nSaved {len(df):,} training sessions to {OUTPUT_FILE}")
-    print("\n── Summary ──────────────────────────────────────────────")
-    print(f"Date range:        {df['session_date'].min().date()} → {df['session_date'].max().date()}")
-    print(f"Unique players:    {df['player_id'].nunique()}")
-    print(f"Avg heart rate:    {df['avg_heart_rate'].mean():.0f} bpm")
-    print(f"Avg shots in:      {df['shots_in'].mean():.1%}")
-    print(f"Avg longest rally: {df['longest_rally'].mean():.1f} shots")
-    print(f"\nSession types:\n{df['session_type'].value_counts().to_string()}")
-    print("─────────────────────────────────────────────────────────")
+    print(f"Generated {len(df):,} training session records")
+    print(f"Date range: {df['session_date'].min()} to {df['session_date'].max()}")
+    print(f"Unique players: {df['player_id'].nunique()}")
+    print(f"Avg shots_in: {df['shots_in'].mean():.1%}")
+    print(f"Sessions with serve data: {df['serves_in_ad'].notna().sum():,}")
+
+    df.to_parquet(
+        OUTPUT_FILE,
+        index=False,
+        coerce_timestamps="us",
+        allow_truncated_timestamps=True
+    )
+    print(f"\nSaved to {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":
