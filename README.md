@@ -1,15 +1,14 @@
-# Tennis Player Development Platform
+# 🎾 Tennis Player Development Platform
 ### An AI-Augmented Analytics Engineering Project on Databricks
 
-![dbt CI](https://github.com/kemmwu/tennis-player-development-platform/actions/workflows/dbt-ci.yml/badge.svg)
-![Python CI](https://github.com/kemmwu/tennis-player-development-platform/actions/workflows/python-ci.yml/badge.svg)
-![Python](https://img.shields.io/badge/python-3.12-blue)
-![dbt](https://img.shields.io/badge/dbt-1.11-orange)
-![Databricks](https://img.shields.io/badge/platform-Databricks-red)
+[![dbt CI](https://github.com/kemmwu/tennis-player-development-platform/actions/workflows/dbt-ci.yml/badge.svg)](https://github.com/kemmwu/tennis-player-development-platform/actions/workflows/dbt-ci.yml)
+[![Python CI](https://github.com/kemmwu/tennis-player-development-platform/actions/workflows/python-ci.yml/badge.svg)](https://github.com/kemmwu/tennis-player-development-platform/actions/workflows/python-ci.yml)
 
-> **One-line pitch:** An end-to-end Lakehouse platform built by a certified tennis coach, using AI to process unstructured data sources and help coaches improve student performance through data-driven decisions.
+> **One-line pitch:** An end-to-end Lakehouse platform built by a certified tennis coach, using AI to process unstructured SwingVision data and help coaches improve student performance through data-driven decisions.
 
 **Target roles:** Analytics Engineer · Data Engineer · AI Engineer (data platform track)
+
+**[Coach Dashboard](#)** · **[Demo Video](#)** · **[dbt Docs](#)**
 
 ---
 
@@ -18,697 +17,777 @@
 1. [Project Positioning](#1-project-positioning)
 2. [Tech Stack](#2-tech-stack)
 3. [Architecture Overview](#3-architecture-overview)
-4. [Data Sources & Ingestion Strategy](#4-data-sources--ingestion-strategy)
-5. [Medallion Layer Design](#5-medallion-layer-design)
-6. [AI / LLM Integration](#6-ai--llm-integration)
-7. [Production Engineering Practices](#7-production-engineering-practices)
-8. [Deliverables](#8-deliverables)
-9. [12-Week Task Plan](#9-12-week-task-plan)
-10. [Resume Bullet Points](#10-resume-bullet-points)
-11. [Interview Narrative](#11-interview-narrative)
+4. [Repository Structure](#4-repository-structure)
+5. [Data Sources & Ingestion Strategy](#5-data-sources--ingestion-strategy)
+6. [Medallion Layer Design](#6-medallion-layer-design)
+7. [AI / LLM Integration](#7-ai--llm-integration)
+8. [dbt Project](#8-dbt-project)
+9. [Production Engineering Practices](#9-production-engineering-practices)
+10. [Databricks Setup](#10-databricks-setup)
+11. [Local Development Setup](#11-local-development-setup)
+12. [Design Decisions](#12-design-decisions)
+13. [Known Limitations](#13-known-limitations)
+14. [Performance & Cost Log](#14-performance--cost-log)
+15. [Resume Bullet Points](#15-resume-bullet-points)
+16. [Interview Narrative](#16-interview-narrative)
 
 ---
 
 ## 1. Project Positioning
 
+### The Problem
+
+Independent tennis coaches have no systematic way to track student development over time. Match statistics live in SwingVision screenshots (images), coaching observations live in handwritten or typed notes (unstructured text), and student intake data lives in forms. None of it is connected, none of it is queryable, and none of it compounds into insight over weeks and months.
+
+### The Solution
+
+A production-grade Lakehouse platform on Databricks that:
+- Extracts structured statistics from SwingVision screenshots using Claude API Vision
+- Parses coaching notes into structured observations using Claude API text extraction
+- Ingests student intake events in real time via Kafka + Lakeflow Connect
+- Transforms everything through a Medallion architecture (Bronze → Silver → Gold) managed by dbt
+- Surfaces a Player Development Score that combines win rate trends, opponent strength, technique progression, and break point conversion
+- Powers a Streamlit coach dashboard with LLM-generated next session recommendations
+
 ### Five Core Selling Points
 
 **1. Domain Expertise × Data Engineering — dual identity**
-You are a real tennis coach whose students have competed at the USTA Sectional level. Every modeling decision is grounded in real coaching logic, not guesswork. In interviews you are both subject matter expert and engineer at the same time.
+Built by a certified tennis coach whose students have competed at the USTA Sectional level. Every modeling decision — the 7-day note-to-match linkage window, the development score component weights, the SwingVision filename convention — is grounded in real coaching logic, not guesswork.
 
 **2. Diverse data sources covering all ingestion patterns**
 - Unstructured images (SwingVision screenshots) → Multimodal LLM extraction
-- Unstructured text (coaching notes) → Text LLM structured extraction
-- Structured form data (student intake questionnaire) → Lakeflow Connect event-driven streaming
-- Synthetic historical data → batch loading for volume
+- Unstructured text (coaching notes embedded in screenshots) → Text LLM structured extraction
+- Structured form data (student intake questionnaire) → Lakeflow Connect + Kafka event-driven streaming
+- Synthetic historical data → batch loading for volume and demo scale
 
 **3. AI as a tool, not a gimmick**
-LLMs solve real DE problems: unstructured-to-structured conversion, semantic validation, natural language querying. This is the AI-augmented data platform narrative that employers want in 2026.
+Claude API solves real data engineering problems: unstructured-to-structured conversion, semantic quality auditing (notes vs. stats consistency), and natural language querying via Databricks Genie. This is the AI-augmented data platform narrative that employers want in 2026.
 
 **4. Production engineering practices**
-Medallion architecture · dbt layered modeling · Auto Loader · Lakeflow Connect · data quality testing · CI/CD · orchestration · observability · lineage · human-in-the-loop review.
+Medallion architecture · dbt layered modeling · Auto Loader · Lakeflow Connect · data quality testing (50+ dbt tests) · GitHub Actions CI/CD · Databricks Workflows orchestration · Lakehouse Monitoring · Unity Catalog lineage · Human-in-the-Loop review · data contracts.
 
-**5. Real stakeholder feedback**
-Real student parents use the final dashboard. Their written feedback appears in this README. This is something 95% of portfolio projects do not have.
+**5. Real data, real students**
+9 real SwingVision sessions from 4 real students (yi, jeffrey, darren, garret). The Streamlit coach dashboard is actively used for coaching decisions.
 
 ---
 
 ## 2. Tech Stack
 
-This project runs on **Databricks Premium tier** and is built to maximize Databricks-native tooling, with VS Code as the local development environment and GitHub for all version control and CI/CD.
+This project runs on **Databricks Premium** and is built to maximise Databricks-native tooling, with VS Code as the local development environment and GitHub for all version control and CI/CD.
 
 | Layer | Tool | Purpose |
 |---|---|---|
 | **IDE** | VS Code + Databricks Extension | Local development, notebook sync, Git integration |
 | **Version Control** | GitHub | All code, dbt models, prompts, notebooks |
-| **Storage & Compute** | Databricks (Premium) | Core Lakehouse platform |
-| **Tables** | Delta Lake (built-in) | ACID transactions, time travel, CDC |
-| **File Storage** | Databricks Volumes | Raw files: screenshots, markdown notes, CSVs |
-| **Batch Ingestion** | Auto Loader + PySpark notebooks | Incremental file ingestion from Volumes |
-| **Streaming Ingestion** | Databricks Lakeflow Connect + Kafka | Real event-driven ingestion from Typeform webhook |
-| **Transformation** | dbt Core + dbt-databricks | Silver & Gold layer modeling |
-| **AI / LLM** | Claude API (claude-sonnet) | Extract structured stats from screenshots & notes |
-| **Data Quality** | dbt tests + dbt-expectations (Silver/Gold) · custom PySpark checks (Bronze) | Multi-layer quality gates |
-| **CI/CD** | GitHub Actions | Auto lint + dbt build on every PR |
+| **Storage & Compute** | Databricks Premium | Core Lakehouse platform |
+| **Workspace** | `dbc-66b56d97-276e.cloud.databricks.com` | Databricks workspace |
+| **Catalog** | Unity Catalog (`tennis_dev`) | Bronze, silver, gold schemas |
+| **Tables** | Delta Lake | ACID transactions, time travel, schema evolution |
+| **File Storage** | Databricks Volumes | Raw files: screenshots, CSV, Parquet |
+| **Batch Ingestion** | PySpark notebooks + pandas | Synthetic data ingestion from Volumes |
+| **Real Data Ingestion** | Auto Loader + PySpark | SwingVision screenshot metadata ingestion |
+| **Streaming Ingestion** | Lakeflow Connect + Confluent Kafka | Real-time Typeform intake events |
+| **Transformation** | dbt Core 1.11 + dbt-databricks 1.12 | Silver & Gold layer modeling |
+| **AI / LLM** | Claude API (`claude-sonnet-4-6`) | Extract structured stats from screenshots |
+| **Data Quality** | dbt tests + dbt-expectations | 50+ automated quality gates |
+| **CI/CD** | GitHub Actions | dbt parse + slim CI on every PR |
 | **Orchestration** | Databricks Workflows | Full DAG scheduling with SLA alerts |
-| **HITL Review** | Streamlit hosted on Databricks Apps | Human review of low-confidence AI extractions |
-| **Coach Dashboard** | Streamlit hosted on Databricks Apps | Student development view for coaches |
-| **BI / Parent View** | Databricks SQL Dashboards | Monthly progress dashboard for parents |
+| **HITL Review** | Streamlit Community Cloud | Human review of low-confidence AI extractions |
+| **Coach Dashboard** | Streamlit Community Cloud | Student development view for coaches |
 | **NL Queries** | Databricks Genie | Natural language querying on Gold layer |
 | **Observability** | Databricks Lakehouse Monitoring | Data quality drift, freshness, volume anomalies |
-| **Lineage** | Unity Catalog (column-level lineage) | End-to-end data lineage |
-
-### Why This Stack?
-
-Every tool above is either **Databricks-native**, **GitHub-native**, or the **industry-standard open-source tool** (dbt) that works across every major cloud warehouse. There is no throwaway tool here. Every item on this list appears in real job descriptions.
+| **Lineage** | Unity Catalog | Column-level lineage |
+| **Intake Form** | Typeform | Student onboarding questionnaire |
+| **Event Bus** | Confluent Kafka | Typeform → Databricks event streaming |
+| **Webhook Automation** | Make.com | Typeform webhook → Kafka bridge |
 
 ---
 
 ## 3. Architecture Overview
-![Architecture Diagram](docs/architecture.png)
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        DATA SOURCES                             │
-├──────────────────┬────────────────────┬─────────────────────────┤
-│ SwingVision      │ Coaching Notes     │ Student Intake Form     │
-│ Screenshots      │ (Markdown files)   │ (Typeform webhook)      │
-│ (image upload)   │                    │                         │
-└────────┬─────────┴─────────┬──────────┴────────────┬────────────┘
-         │                   │                        │
-         ▼                   ▼                        ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     INGESTION LAYER                             │
-│  Auto Loader (screenshots + notes) → Databricks Volumes        │
-│  Lakeflow Connect + Kafka (intake events) → streaming table     │
-│  Schema enforcement · file hash deduplication                   │
-└─────────────────────────────┬───────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              BRONZE LAYER — PySpark Notebooks                   │
-│  raw_screenshots · raw_notes · raw_intake_events                │
-│  File hash dedup · schema enforcement · _ingested_at metadata   │
-└──────────────┬──────────────────────────────┬───────────────────┘
-               │                              │
-          (high conf)                    (low conf)
-               │                              │
-               │                              ▼
-               │                   ┌──────────────────────┐
-               │                   │   HITL Review App    │
-               │                   │  (Streamlit on       │
-               │                   │   Databricks Apps)   │
-               │                   └──────────┬───────────┘
-               └──────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  AI EXTRACTION LAYER (Python)                   │
-│  Claude API (Vision) → match stats JSON + confidence score      │
-│  Claude API (Text)   → coaching observations JSON               │
-│  Prompt versioning in GitHub · Dead Letter Queue in Delta       │
-└─────────────────────────────┬───────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  SILVER LAYER — dbt models                      │
-│  stg_match_stats · stg_coaching_notes · stg_students            │
-│  stg_player_name_mapping · int_player_session_rollup            │
-│  dbt tests: not_null · unique · accepted_range · custom tests   │
-└─────────────────────────────┬───────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   GOLD LAYER — dbt marts                        │
-│  dim_players · dim_sessions · fct_match_performance             │
-│  mart_player_development_score · mart_coach_weekly_digest       │
-│  mart_parent_monthly_report                                     │
-└──────────────┬──────────────────────────┬───────────────────────┘
-               │                          │
-               ▼                          ▼
-┌─────────────────────────┐   ┌───────────────────────────────────┐
-│ Databricks SQL Dashboard│   │ Databricks Genie                  │
-│ + Streamlit coach app   │   │ "Did my student's serve improve   │
-│ (Databricks Apps)       │   │  this month?"                     │
-└─────────────────────────┘   └───────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                          DATA SOURCES                               │
+├──────────────────┬──────────────────────┬───────────────────────────┤
+│ SwingVision      │ Coaching Notes       │ Student Intake Form       │
+│ Screenshots      │ (embedded in         │ (Typeform)                │
+│ (9 real sessions │  screenshots)        │                           │
+│  + 6k synthetic) │                      │                           │
+└────────┬─────────┴──────────┬───────────┴─────────────┬─────────────┘
+         │                    │                          │
+    Auto Loader          Auto Loader              Make.com webhook
+         │                    │                          │
+         ▼                    ▼                     Confluent Kafka
+┌─────────────────────────────────────────────────────────────────────┐
+│                       BRONZE LAYER                                  │
+│  tennis_dev.bronze                                                  │
+│  ├── raw_match_extractions   (6,004 rows: 4 real + 6k synthetic)   │
+│  ├── raw_training_sessions   (12,002 rows: 2 real + 12k synthetic) │
+│  ├── raw_screenshots         (9 rows — screenshot metadata)        │
+│  ├── raw_students            (streaming from Typeform via Kafka)   │
+│  ├── extraction_failures     (dead letter queue)                   │
+│  └── extraction_eval_set     (HITL-approved corrections)           │
+│                                                                     │
+│  System columns: _ingested_at · _source_file · _record_hash        │
+│  · _pipeline_version                                                │
+└──────────────────────────────┬──────────────────────────────────────┘
+                                │
+                    Claude API (claude-sonnet-4-6)
+                    Vision + Text extraction
+                    Confidence scoring
+                    Dead Letter Queue on failure
+                                │
+                    ┌───────────┴──────────┐
+               (confidence ≥ 0.8)   (confidence < 0.8)
+                    │                      │
+                    │            HITL Review App
+                    │            (Streamlit Community Cloud)
+                    │            Corrections → extraction_eval_set
+                    └───────────┬──────────┘
+                                │
+┌─────────────────────────────────────────────────────────────────────┐
+│                       SILVER LAYER — dbt views                      │
+│  tennis_dev.silver_stg                                              │
+│  ├── stg_match_stats          (type casting, null handling)        │
+│  ├── stg_training_sessions    (normalised, validated)              │
+│  ├── stg_students             (SCD Type 2)                         │
+│  └── stg_player_name_mapping  (alias resolution seed)             │
+│                                                                     │
+│  tennis_dev.silver_int                                              │
+│  ├── int_match_with_opponent_strength                              │
+│  ├── int_session_rollup_daily                                      │
+│  └── int_notes_with_match_linkage (7-day window JOIN)              │
+└──────────────────────────────┬──────────────────────────────────────┘
+                                │
+┌─────────────────────────────────────────────────────────────────────┐
+│                       GOLD LAYER — dbt marts                        │
+│  tennis_dev.silver_gold                                             │
+│  ├── dim_players              (SCD Type 2)                         │
+│  ├── fct_match_performance    (core fact, partitioned by month)    │
+│  ├── fct_training_sessions    (training fact)                      │
+│  ├── mart_player_development_score  ← flagship metric             │
+│  ├── mart_coach_weekly_digest (incremental)                        │
+│  └── mart_parent_monthly_report (incremental)                      │
+│                                                                     │
+│  tennis_dev.gold (PySpark-managed)                                  │
+│  ├── extraction_eval_set      (HITL corrections)                   │
+│  └── llm_quality_findings     (semantic inconsistency audit)       │
+└──────────────────────────────┬──────────────────────────────────────┘
+                                │
+               ┌────────────────┴─────────────────┐
+               ▼                                   ▼
+   Streamlit Coach Dashboard           Databricks Genie
+   (LLM recommendations)               (NL queries on Gold)
 
 Cross-cutting:
-  • Databricks Workflows        — orchestration & SLA alerts
-  • GitHub Actions              — CI/CD, dbt build on PR
-  • Unity Catalog               — column-level lineage
-  • Databricks Lakehouse Monitor— data quality drift detection
+  • Databricks Workflows    — orchestration & SLA alerts
+  • GitHub Actions          — CI/CD, dbt build on PR
+  • Unity Catalog           — column-level lineage
+  • Databricks Lakehouse Monitoring — freshness & drift detection
 ```
 
 ---
 
-## 4. Data Sources & Ingestion Strategy
+## 4. Repository Structure
 
-### Source 1: SwingVision Screenshots (Unstructured Images)
+```
+tennis-player-development-platform/
+│
+├── ingestion/
+│   ├── bronze_match_stats.py          # Pandas batch ingestion for synthetic matches
+│   ├── bronze_training_sessions.py    # Pandas batch ingestion for synthetic sessions
+│   ├── bronze_screenshots.py          # Auto Loader for real SwingVision screenshots
+│   ├── bronze_students_stream.py      # Kafka streaming intake events
+│   └── workflow_config.yml            # Databricks Workflow DAG definition
+│
+├── extraction/
+│   ├── extract_sessions.py            # Claude API Vision extraction (real screenshots)
+│   └── llm_quality_auditor.py         # Semantic consistency auditor
+│
+├── tennis_analytics/                  # dbt project
+│   ├── models/
+│   │   ├── staging/                   # stg_* views (Bronze → Silver)
+│   │   ├── intermediate/              # int_* views (Silver enrichments)
+│   │   └── marts/                     # dim_*, fct_*, mart_* tables
+│   ├── seeds/
+│   │   └── player_name_mapping.csv    # Alias → canonical player ID
+│   ├── tests/                         # Custom dbt tests
+│   ├── dbt_project.yml
+│   ├── packages.yml
+│   └── profiles_example.yml
+│
+├── streamlit/
+│   ├── hitl_review.py                 # Human-in-the-Loop review app
+│   ├── coach_app.py                   # Coach dashboard with LLM recommendations
+│   └── requirements.txt
+│
+├── scripts/
+│   ├── generate_matches.py            # Synthetic match data generator (6k records)
+│   ├── generate_training_sessions.py  # Synthetic session generator (12k records)
+│   ├── z_ordering_demo.py             # Z-order performance benchmark
+│   └── validate_contracts.py          # Data contract validation notebook
+│
+├── data_contracts/
+│   ├── raw_match_extractions.yml      # Bronze schema contract
+│   └── raw_training_sessions.yml      # Bronze schema contract
+│
+├── docs/
+│   ├── decisions.md                   # 13 design decisions with full context
+│   ├── known_limitations.md           # Honest limitations list
+│   ├── self_assessment.md             # Project self-assessment report
+│   └── schema.md                      # Full schema documentation
+│
+├── .github/
+│   └── workflows/
+│       ├── dbt-ci.yml                 # dbt deps + parse + slim CI
+│       └── python-ci.yml             # ruff + pytest
+│
+├── .pre-commit-config.yaml
+├── .gitignore
+├── CONTRIBUTING.md
+├── LICENSE
+└── README.md
+```
 
-**Ingestion mode:** Auto Loader — incremental file ingestion
+---
 
-1. Coach uploads match analysis screenshots to a Databricks Volume via VS Code
-2. Auto Loader monitors the Volume and triggers ingestion on new files
-3. PySpark computes SHA-256 file hash for deduplication
-4. DLT pipeline reads files into `bronze.raw_screenshots` with schema enforcement
-5. DLT Expectation rejects records missing `source_file` or `ingested_at`
-6. Claude API (Vision) called downstream for structured extraction
+## 5. Data Sources & Ingestion Strategy
 
-**Extraction output example:**
+### Source 1: SwingVision Screenshots (Real Data — 9 sessions, 4 students)
+
+SwingVision is a mobile app that uses computer vision to track tennis match and training statistics in real time. After each session the coach uploads the summary screenshots to a Databricks Volume.
+
+**Filename convention (locked in):**
+```
+YYYYMMDDHHNN_firstname_match_N.png      # match sessions
+YYYYMMDDHHNN_firstname_training_N.png   # training sessions
+```
+Same prefix = same session. Date/time is parsed from the filename — not from Claude. Page number at the end handles multi-page sessions.
+
+**Real students with data:**
+- `yi` — match sessions
+- `jeffrey` — training sessions
+- `darren` — training sessions
+- `garret` — match + training sessions
+
+**Ingestion flow:**
+1. Coach uploads screenshots to `/Volumes/tennis_dev/bronze/raw_files/screenshots/`
+2. `bronze_screenshots.py` reads metadata via Auto Loader into `bronze.raw_screenshots`
+3. `extract_sessions.py` calls Claude API Vision on each file, writes structured JSON to `bronze.raw_match_extractions` or `bronze.raw_training_sessions`
+
+**Claude API extraction output (matches):**
 ```json
 {
-  "source_file": "2026-03-15_alex_match.jpg",
-  "file_hash": "sha256:abc123...",
-  "match_date": "2026-03-15",
-  "player_name": "Alex Chen",
-  "first_serve_pct": 0.68,
-  "second_serve_pct": 0.85,
-  "winners": 23,
-  "unforced_errors": 15,
-  "avg_rally_length": 4.2,
-  "extraction_confidence": 0.92,
-  "prompt_version": "v1.3",
-  "extracted_at": "2026-04-18T10:23:45Z"
+  "match_id": "202603211400_yi_match",
+  "player_id": "yi",
+  "match_date": "2026-03-21",
+  "score": "5-7",
+  "player_won": false,
+  "winners": 2,
+  "unforced_errors": 13,
+  "first_serves_in": 22,
+  "first_serves_total": 29,
+  "raw_note_text": "## groundstroke\nNeed to be more patient...",
+  "extraction_confidence": 0.95,
+  "prompt_version": "v1.0"
 }
 ```
 
 ---
 
-### Source 2: Coaching Notes (Unstructured Text)
+### Source 2: Synthetic Historical Data (6,000 matches + 12,000 training sessions)
 
-**Ingestion mode:** Auto Loader — daily batch
+**Why synthetic data?**
+With only 4 real students and 9 sessions, the project cannot demonstrate window functions, partitioning, Z-ordering, incremental model behavior, or meaningful trend analysis. Synthetic data solves the "not enough data" objection without compromising engineering integrity — clearly documented here and marked with `prompt_version = "synthetic"` in the Bronze tables.
 
-1. Coach writes markdown notes in VS Code after each session (one `.md` file per session)
-2. Files saved directly to Databricks Volume via VS Code + Databricks Extension file sync
-3. Auto Loader detects new files, DLT reads into `bronze.raw_coaching_notes`
-4. Claude API (Text) extracts: `player`, `technique`, `issue`, `recommendation`, `sentiment`
-5. Handles Chinese-English mixed language natively
+**Generation:**
+```bash
+python scripts/generate_matches.py       # → data/match_stats.parquet (6,000 rows)
+python scripts/generate_training_sessions.py  # → data/training_sessions.parquet (12,000 rows)
+```
 
-**LLM extraction output example:**
-```json
-[
-  {
-    "player": "Tim",
-    "technique": "backhand slice",
-    "issue": "inconsistent on high balls",
-    "recommendation": "wall drill for swing path stability",
-    "sentiment": "needs_work"
-  },
-  {
-    "player": "Tim",
-    "technique": "forehand (running)",
-    "issue": null,
-    "recommendation": null,
-    "sentiment": "improving"
-  }
-]
+**Configuration:**
+- 50 synthetic students · 3 years of data (2023–2025)
+- 40 matches/student/year · 80 sessions/student/year
+- Realistic stat distributions based on USTA junior player profiles
+- Random seed = 42 for reproducibility
+
+**Ingestion:**
+Uses pandas batch approach (not Auto Loader) due to Unity Catalog schema type constraints with the existing real data tables. Real data is preserved; synthetic data appended with deduplication by `match_id` / `session_id`.
+
+---
+
+### Source 3: Student Intake Questionnaire (Real-time streaming)
+
+**Flow:**
+```
+Typeform form submission
+    → Make.com webhook
+    → Confluent Kafka (cluster: lkc-v7pn7kj, topic: student_intake_events)
+    → Lakeflow Connect (Fivetran)
+    → Databricks Delta streaming table
+    → bronze.raw_students
+```
+
+**Why Kafka here?**
+This is the pattern used at every production company for event-driven data. Demonstrating Lakeflow Connect + Kafka in a portfolio project immediately signals understanding of production streaming architectures. The form itself: `https://form.typeform.com/to/N1yCg9tE`
+
+---
+
+## 6. Medallion Layer Design
+
+### Bronze Layer — PySpark / pandas
+
+All Bronze tables are written by PySpark notebooks triggered by Databricks Workflows. The real screenshot data uses Auto Loader; synthetic data uses a pandas batch pattern.
+
+**Schema conventions:**
+- System metadata columns on all tables: `_ingested_at`, `_source_file`, `_record_hash`, `_pipeline_version`
+- Delta Lake time travel retained for 30 days
+- Dead letter queue: `bronze.extraction_failures` captures failed Claude API calls with `error_reason`
+
+**Void columns** (present in schema but always null — SwingVision does not capture these fields):
+- `raw_match_extractions`: `opponent_name`, `opponent_utr`, `tournament_name`, `surface`
+- `raw_training_sessions`: `drills_completed`
+
+These are excluded from all dbt staging models. Documented in `/docs/decisions.md` Decision 8.
+
+| Table | Rows | Notes |
+|---|---|---|
+| `bronze.raw_match_extractions` | ~6,004 | 4 real + 6,000 synthetic |
+| `bronze.raw_training_sessions` | ~12,002 | 2 real + 12,000 synthetic |
+| `bronze.raw_screenshots` | 9 | Real screenshot metadata only |
+| `bronze.raw_students` | varies | Live Typeform streaming |
+| `bronze.extraction_failures` | — | Dead letter queue |
+
+---
+
+### Silver Layer — dbt (views)
+
+All Silver models are dbt views — they compute on read from Bronze rather than materialising, keeping storage costs minimal and latency low for a project of this scale.
+
+**Staging models (`silver_stg` schema):**
+
+| Model | Key transformations |
+|---|---|
+| `stg_match_stats` | Type casting (match_date → DateType), null handling, percentage calculations from raw counts (first_serve_pct, break_point_conversion etc.) |
+| `stg_training_sessions` | Normalised accuracy metrics, nullable serve/return fields handled, session_date cast |
+| `stg_students` | SCD Type 2 — tracks student profile changes. Intake form fields mapped to canonical schema |
+| `stg_player_name_mapping` | Resolves aliases ("Alex" / "Alex Chen" / Chinese names) to canonical player IDs — domain expertise creates engineering value here |
+
+**Intermediate models (`silver_int` schema):**
+
+| Model | Description |
+|---|---|
+| `int_match_with_opponent_strength` | Calculates `opponent_strength_weight` (defaults to 1.0 — opponent UTR not yet in SwingVision data) and `weighted_win`. Also derives `match_week`, `match_month`, `match_year_month` |
+| `int_session_rollup_daily` | Aggregates multiple training sessions on the same day per player, computes averages and counts |
+| `int_notes_with_match_linkage` | Time-window JOIN linking coaching note sessions to match performance within a 7-day window. Window size based on coaching expertise: notes from a training session typically affect match performance within the following week |
+
+---
+
+### Gold Layer — dbt marts (tables)
+
+All Gold models are materialised as Delta tables. Fact tables are partitioned by `match_year_month`. Incremental models (`mart_coach_weekly_digest`, `mart_parent_monthly_report`) use `unique_key` to avoid reprocessing historical data.
+
+**Note on schema naming:** dbt appends custom schema to the target schema configured in `profiles.yml`. With target = `silver`, models configured with `+schema: gold` land in `silver_gold`. PySpark-managed tables (`extraction_eval_set`, `llm_quality_findings`) land in the `gold` schema. See Design Decision 13.
+
+| Model | Grain | Description |
+|---|---|---|
+| `dim_players` | One row per player version | SCD Type 2. Tracks `is_current` flag, `valid_from`, `valid_to` |
+| `fct_match_performance` | One row per match per player | Core fact table. Includes all serve, return, rally, and break point stats as both raw counts and percentages. Includes `raw_note_text` from extraction, `has_note` flag, `opponent_strength_weight` |
+| `fct_training_sessions` | One row per training day per player | Aggregated training session facts — accuracy rates, rally depth, serve/return speeds |
+| `mart_player_development_score` | One row per player per week | **Flagship metric.** See formula below |
+| `mart_coach_weekly_digest` | One row per player per week | Incremental. Surfaces `development_score`, `score_change`, `score_trend`, `matches_played`, `sessions_completed`, `avg_shots_per_hour` |
+| `mart_parent_monthly_report` | One row per player per month | Incremental. Monthly roll-up for parent-facing dashboard |
+
+**Player Development Score Formula:**
+
+```
+development_score = (
+    win_rate_score            * 0.40   +   -- Win rate trend over last 8 weeks
+    opponent_strength_score   * 0.30   +   -- Weighted win rate by opponent UTR (defaults to 1.0)
+    technique_score           * 0.20   +   -- Training accuracy trend (shots_in, forehand/backhand)
+    break_point_score         * 0.10       -- Break point conversion rate
+) * 100
+```
+
+Score range: 0–100. Documented in full in the dbt model description for `mart_player_development_score`.
+
+---
+
+## 7. AI / LLM Integration
+
+### Integration 1: Vision + Text Extraction (extract_sessions.py)
+
+**Model:** `claude-sonnet-4-6`
+**Method:** Direct `requests.post` to `https://api.anthropic.com/v1/messages` (no SDK — incompatible with Databricks runtime)
+**Input:** SwingVision screenshot encoded as base64
+**Output:** Structured JSON for match stats OR training session stats depending on filename
+
+The same notebook handles both match and training screenshots — the filename convention (`_match_` vs `_training_`) determines which schema to extract against.
+
+**Prompt versioning:** Prompts are version-controlled in `prompts/` as YAML files (`v1.0` currently). Prompt version is stored on every extracted record.
+
+**Failure handling:** 3 retries → `bronze.extraction_failures` with `error_reason` → surfaced in HITL Streamlit app.
+
+**Confidence scoring:** Claude returns a confidence score (0–1) for each extraction. Records with confidence < 0.8 are flagged for HITL review.
+
+---
+
+### Integration 2: HITL Review App (streamlit/hitl_review.py)
+
+Streamlit app deployed on Streamlit Community Cloud. Shows extractions with confidence < 0.8, displays original screenshot alongside AI output, and allows the coach to approve or correct each field. Corrections are saved to `gold.extraction_eval_set` for future prompt evaluation.
+
+---
+
+### Integration 3: LLM Quality Auditor (extraction/llm_quality_auditor.py)
+
+Weekly notebook that uses Claude API to compare coaching notes against match statistics for semantic consistency. Example: if notes say "backhand is inconsistent" but match data shows backhand error rate dropped 20%, it flags the discrepancy for coach review. Findings written to `gold.llm_quality_findings` and surfaced in the coach Streamlit app.
+
+---
+
+### Integration 4: Coach Dashboard Recommendations (streamlit/coach_app.py)
+
+The coach dashboard includes a "Generate recommendation" button that constructs a prompt from recent match stats, training session accuracy, and coaching notes, then calls `claude-sonnet-4-6` to produce a specific, actionable next session plan. Output is rendered inline in the dashboard.
+
+---
+
+### Integration 5: Databricks Genie (Natural Language Querying)
+
+Genie Space configured on `silver_gold` Gold layer tables. Business term definitions written in Genie instructions (e.g., what "break point conversion" means, what the development score formula is). Sample queries seeded for coach and parent personas.
+
+---
+
+## 8. dbt Project
+
+### Project Structure
+
+```
+tennis_analytics/
+├── models/
+│   ├── staging/
+│   │   ├── stg_match_stats.sql + .yml
+│   │   ├── stg_training_sessions.sql + .yml
+│   │   ├── stg_students.sql + .yml
+│   │   └── stg_player_name_mapping.sql + .yml
+│   ├── intermediate/
+│   │   ├── int_match_with_opponent_strength.sql + .yml
+│   │   ├── int_session_rollup_daily.sql + .yml
+│   │   └── int_notes_with_match_linkage.sql + .yml
+│   └── marts/
+│       ├── dim_players.sql + .yml
+│       ├── fct_match_performance.sql + .yml
+│       ├── fct_training_sessions.sql + .yml
+│       ├── mart_player_development_score.sql + .yml
+│       ├── mart_coach_weekly_digest.sql + .yml
+│       └── mart_parent_monthly_report.sql + .yml
+├── seeds/
+│   └── player_name_mapping.csv
+├── tests/
+│   ├── first_serve_pct_valid_range.sql
+│   ├── match_date_not_future.sql
+│   └── shots_in_valid_range.sql
+├── dbt_project.yml
+├── packages.yml              # dbt-utils
+├── profiles_example.yml
+└── sources.yml               # Bronze table sources with freshness checks
+```
+
+### Data Quality Tests
+
+Every model has dbt tests. Total: **51 tests** across all layers.
+
+| Layer | Test types |
+|---|---|
+| Staging | `not_null`, `unique`, `accepted_values`, custom range tests |
+| Intermediate | `not_null`, `unique`, referential integrity |
+| Marts | `not_null`, `unique`, `accepted_values` (score_trend), business logic |
+
+Custom tests:
+- `first_serve_pct_valid_range` — must be between 0 and 1
+- `match_date_not_future` — match dates cannot be in the future
+- `shots_in_valid_range` — training accuracy must be between 0 and 1
+
+### Running dbt
+
+```bash
+cd tennis_analytics
+dbt deps              # install dbt-utils
+dbt build             # full build + test
+dbt build --select stg_match_stats+    # build from staging onwards
+dbt test              # run tests only
+dbt docs generate     # generate docs
 ```
 
 ---
 
-### Source 3: Student Intake Questionnaire (Structured, Event-Driven)
-
-**Ingestion mode:** Lakeflow Connect + Kafka — real streaming
-
-1. Student fills Typeform questionnaire before first lesson
-2. Typeform submission triggers a webhook to a Kafka topic (via Lakeflow Connect)
-3. Lakeflow Connect ingests Kafka events directly into a Delta streaming table
-4. Spark Structured Streaming consumes events and writes to `bronze.raw_intake_events`
-5. Even at low event volume, the architecture is fully production-grade
-
-**Why keep Kafka here:** This is the pattern used at every real company for event-driven data. Demonstrating Lakeflow Connect + Kafka in a portfolio project immediately signals you understand production streaming architectures, not just batch.
-
----
-
-### Source 4: Synthetic Historical Data
-
-**Why include this:** Solves the "not enough data" objection in interviews.
-
-- Python + Faker generates 2–3 years of realistic student match records
-- 50 students · 2,000–4,000 match records · thousands of training sessions
-- Enables real window functions, Z-ordering demos, partitioning strategies
-- Clearly documented in README as synthetic — this is an engineering integrity choice, not a flaw
-
----
-
-## 5. Medallion Layer Design
-
-### Bronze Layer — PySpark Notebooks
-
-All Bronze tables are written by PySpark notebooks, triggered by Databricks Workflows. Auto Loader handles incremental file detection. Custom PySpark logic enforces schema and deduplicates by file hash.
-
-| Table | Content | Quality Check |
-|---|---|---|
-| `bronze.raw_screenshots` | Screenshot metadata + file hash | `source_file IS NOT NULL`, hash dedup |
-| `bronze.raw_match_extractions` | Claude API vision output + confidence score | `extraction_confidence IS NOT NULL` |
-| `bronze.raw_coaching_notes` | Raw markdown content | `note_date IS NOT NULL` |
-| `bronze.raw_note_extractions` | Claude API text output | `player IS NOT NULL` |
-| `bronze.raw_intake_events` | Kafka streaming events from Typeform | `student_id IS NOT NULL` |
-| `bronze.extraction_failures` | Dead letter queue for failed LLM calls | — |
-
-All Bronze tables carry system columns: `_ingested_at`, `_source_file`, `_record_hash`, `_pipeline_version`. Delta Lake time travel retained for 30 days.
-
----
-
-### Silver Layer — dbt
-
-| Model | Description |
-|---|---|
-| `stg_match_stats` | Cleaned from `raw_match_extractions`. Type casting, unit normalization, null handling. |
-| `stg_coaching_notes` | Text normalization, player name standardization. |
-| `stg_students` | SCD Type 2 — tracks student profile changes over time. |
-| `stg_player_name_mapping` | Resolves aliases (`"Alex"` / `"Alex Chen"` / Chinese name) to canonical ID. This is where domain expertise creates engineering value. |
-| `int_match_with_opponent_strength` | Weights each match result by opponent UTR rating. |
-| `int_session_rollup_daily` | Aggregates training sessions by day. |
-| `int_notes_with_match_linkage` | Time-window JOIN linking coaching notes to subsequent match performance (7-day window based on coaching expertise). |
-
-**dbt tests on every Silver model:**
-- `not_null`, `unique`, `relationships` (built-in)
-- `first_serve_pct` must be between 0 and 1
-- `winners` and `unforced_errors` must be non-negative
-- `match_date` cannot be in the future
-- Unique combination of `(match_id, player_id)` enforced on fact tables
-
----
-
-### Gold Layer — dbt Marts
-
-| Model | Description |
-|---|---|
-| `dim_players` | SCD Type 2. Retains full student profile change history. |
-| `dim_sessions` | Session dimension table. |
-| `dim_tournaments` | Tournament dimension table. |
-| `fct_match_performance` | Core fact table. Grain: one match × one player. Partitioned by `match_year_month`. |
-| `fct_training_sessions` | Training session facts. |
-| `mart_player_development_score` | **Flagship metric.** Combines win rate trend (40%), opponent strength weighting (30%), technique progression from LLM-parsed notes (20%), break point conversion (10%). Formula fully documented in dbt model description. |
-| `mart_coach_weekly_digest` | Weekly student status summary for coaches. Incremental model. |
-| `mart_parent_monthly_report` | Monthly progress report data for parents. Incremental model. |
-
----
-
-## 6. AI / LLM Integration
-
-### Integration 1: Vision LLM — Match Stats Extraction
-
-- **Tool:** Claude API (`claude-sonnet`) called from PySpark notebook in VS Code
-- **Input:** SwingVision screenshot (base64 encoded)
-- **Output:** Structured JSON validated by Pydantic schema
-- **Engineering:** Few-shot prompting with 2–3 annotated examples, prompt versioning in GitHub (`prompts/vision/match_stats_v1.yaml`)
-- **Failure handling:** Retry 3× → Dead Letter Queue (`bronze.extraction_failures`) → surface in HITL Streamlit app
-
----
-
-### Integration 2: Text LLM — Coaching Notes Extraction
-
-- Same architecture as Vision LLM, text-only input
-- Prompt explicitly handles Chinese-English mixed language
-- Output fields: `player`, `technique`, `issue`, `recommendation`, `sentiment`
-
----
-
-### Integration 3: Natural Language Querying — Databricks Genie
-
-- Genie Space configured on Gold layer tables
-- Business term definitions written in Genie instructions (e.g., what "break point conversion" means)
-- Sample queries seeded for parent and coach personas
-- **AE value:** Quality of Genie answers depends 90% on how well Gold layer tables, columns, and metrics are named and documented. This is core AE output.
-
----
-
-### Integration 4: LLM as Data Quality Auditor
-
-- Weekly job compares coaching notes versus match statistics for semantic consistency
-- Example: notes say "Tim's backhand is inconsistent" but data shows backhand error rate dropped 20% → flagged for coach review
-- Output written to `gold.llm_quality_findings`
-- Coach reviews findings in a dedicated Streamlit page hosted on Databricks Apps
-- **Interview talking point:** Demonstrates you think about LLMs as components in a data platform with defined roles, not just as chatbots
-
----
-
-### Integration 5: Extraction Feedback Loop
-
-- HITL-approved corrections saved to `gold.extraction_eval_set`
-- Monthly evaluation notebook runs the latest prompt against the eval set and measures field-level accuracy
-- Accuracy trend tracked over time in a Databricks SQL Dashboard
-- Demonstrates understanding that **production AI systems need continuous evaluation**, not one-time deployment
-
----
-
-## 7. Production Engineering Practices
+## 9. Production Engineering Practices
 
 ### CI/CD — GitHub Actions
 
-```
-on: pull_request
-  → sqlfluff lint
-  → dbt parse
-  → dbt build --select state:modified+    (slim CI: only changed models)
-  → dbt test --select state:modified+
+```yaml
+# On every PR:
+  → dbt deps
+  → dbt parse (syntax check)
+  → dbt build --select state:modified+  (slim CI)
 
-on: merge to main
+# On merge to main:
   → dbt build (full)
   → dbt docs generate
-  → publish dbt docs to GitHub Pages
+  → Publish dbt docs to GitHub Pages
 ```
 
-- Pre-commit hooks: `sqlfluff`, `black` (Python formatter), `yamllint`
-- `dbt-checkpoint` enforces every model has a description and every column is documented
-- Branch protection: `main` requires passing CI before merge
+`.github/workflows/dbt-ci.yml` and `.github/workflows/python-ci.yml` are both required checks on `main`. Branch protection enforced — all changes via PR.
 
----
+### Orchestration — Databricks Workflows
 
-### Data Quality — Multi-Layer
+DAG tasks in order:
+1. `ingest_students` — bronze_students.py
+2. `ingest_match_stats` — bronze_match_stats.py
+3. `ingest_training_sessions` — bronze_training_sessions.py
+4. `ingest_students_stream` — bronze_students_stream.py (parallel)
+5. `ingest_screenshots` — bronze_screenshots.py
+6. `extract_sessions` — extract_sessions.py
+7. `validate_contracts` — validate_contracts.py
+8. `llm_quality_auditor` — llm_quality_auditor.py
 
-| Layer | Tool | What It Checks |
-|---|---|---|
-| Bronze | Custom PySpark assertions in notebook | Schema enforcement, null critical fields, file hash deduplication |
-| Silver | dbt built-in tests | Uniqueness, referential integrity, accepted ranges |
-| Silver | dbt-expectations package | Statistical distribution checks |
-| Gold | Custom dbt tests | Business logic (development score components sum to 100%) |
-| All layers | Databricks Lakehouse Monitoring | Freshness, volume anomalies, schema drift over time |
-
----
+SLA alerts: email notification to `kemmwu@gmail.com` if any task exceeds 30 minutes or fails.
 
 ### Data Contracts
 
-- YAML files define expected schema, SLA, and owner at the Bronze-to-Silver boundary
-- Validation script runs in GitHub Actions CI: fails the build if upstream schema violates the contract
-- One of the most discussed topics in AE roles in 2026
+YAML contracts in `data_contracts/` define expected schema, nullability, and SLA at the Bronze-to-Silver boundary. `scripts/validate_contracts.py` runs as a Databricks Workflow task after extraction to verify schema compliance before dbt runs.
+
+### Observability — Databricks Lakehouse Monitoring
+
+Enabled on three key tables:
+- `fct_match_performance` (timestamp: `match_date`, granularity: 1 day)
+- `fct_training_sessions` (timestamp: `session_date`)
+- `mart_player_development_score` (timestamp: `score_week`)
+
+Monitors freshness, volume anomalies, and schema drift automatically.
+
+### Lineage — Unity Catalog
+
+Column-level lineage tracked through Unity Catalog. Any Gold metric can be traced back to its source Bronze file.
+
+### Pre-commit Hooks
+
+`.pre-commit-config.yaml` runs on every commit:
+- `dbt-checkpoint` — every model must have a description and every column documented
+- `ruff` — Python linting with auto-fix
+- `trailing-whitespace`, `end-of-file-fixer`, `check-yaml`
 
 ---
 
-### Observability
+## 10. Databricks Setup
 
-- **Lineage:** Unity Catalog column-level lineage — trace any Gold metric back to its source file
-- **Data quality monitoring:** Databricks Lakehouse Monitoring — freshness, volume, and schema drift dashboard for all key tables
-- **dbt docs:** Table-level and column-level lineage graph published to GitHub Pages
-- **Cost tracking:** Databricks cluster cost logged weekly in this README under [Performance & Cost Log](#)
+```
+Workspace:    https://dbc-66b56d97-276e.cloud.databricks.com
+Catalog:      tennis_dev
+Schemas:      bronze · silver · silver_stg · silver_int · silver_gold · gold
+SQL Warehouse: Serverless Starter (HTTP path: /sql/1.0/warehouses/cc5f410c110e6188)
+Secret scope: tennis (key: anthropic_api_key)
+Volume path:  /Volumes/tennis_dev/bronze/raw_files/
+```
+
+**Schema naming note:**
+- `silver_stg` — dbt staging models
+- `silver_int` — dbt intermediate models
+- `silver_gold` — dbt mart models (dim, fct, mart tables)
+- `gold` — PySpark-managed tables (extraction_eval_set, llm_quality_findings)
+
+This is because dbt appends the custom schema config to the target schema (`silver`). See Design Decision 13.
 
 ---
 
-### Performance Benchmarks
+## 11. Local Development Setup
 
-| Metric | Target |
+### Prerequisites
+
+- Python 3.11+
+- Databricks workspace access
+- Anthropic API key
+
+### Installation
+
+```bash
+# Clone repo
+git clone https://github.com/kemmwu/tennis-player-development-platform.git
+cd tennis-player-development-platform
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate   # Mac/Linux
+# .venv\Scripts\activate    # Windows
+
+# Install Python dependencies
+pip install dbt-core dbt-databricks pre-commit faker pandas pyarrow requests
+
+# Install pre-commit hooks
+pre-commit install
+
+# Configure dbt profile
+cp tennis_analytics/profiles_example.yml ~/.dbt/profiles.yml
+# Edit ~/.dbt/profiles.yml with your Databricks credentials
+
+# Verify dbt connection
+cd tennis_analytics
+dbt debug
+```
+
+### Generate Synthetic Data
+
+```bash
+mkdir -p data
+python scripts/generate_matches.py           # generates data/match_stats.parquet
+python scripts/generate_training_sessions.py # generates data/training_sessions.parquet
+```
+
+Upload both Parquet files to `/Volumes/tennis_dev/bronze/raw_files/` via Databricks UI or VS Code + Databricks Extension.
+
+### Run the Full Pipeline
+
+```bash
+# In Databricks: run ingestion notebooks
+# bronze_match_stats.py → bronze_training_sessions.py → extract_sessions.py
+
+# Locally: run dbt
+cd tennis_analytics
+dbt build
+```
+
+---
+
+## 12. Design Decisions
+
+Full log in `/docs/decisions.md`. Summary of key decisions:
+
+| # | Decision | Choice |
+|---|---|---|
+| 1 | Databricks tier | Premium (Unity Catalog, Lakehouse Monitoring, Lakeflow Connect) |
+| 2 | IDE | VS Code + Databricks Extension (not Databricks notebooks) |
+| 3 | Bronze materialisation | PySpark notebooks (not DLT — simpler, lower cost, identical concepts) |
+| 4 | Silver materialisation | dbt views (not tables — compute on read, lower storage cost at this scale) |
+| 5 | LLM provider | Claude API via requests (not SDK — SDK incompatible with Databricks runtime) |
+| 6 | Streaming | Lakeflow Connect + Confluent Kafka + Make.com (production-grade event streaming) |
+| 7 | Synthetic data ingestion | Pandas batch (not Auto Loader — Unity Catalog schema type conflicts with real data) |
+| 8 | Void columns | Excluded from dbt models (SwingVision does not capture opponent_utr, surface etc.) |
+| 9 | Opponent strength | Defaults to 1.0 (neutral) — opponent UTR not yet available from SwingVision |
+| 10 | Note-to-match window | 7 days (based on coaching expertise: training impact visible within one week) |
+| 11 | Streamlit hosting | Community Cloud (not Databricks Apps — simpler deployment for portfolio scope) |
+| 12 | Synthetic data strategy | 3 years × 50 students = 6k matches + 12k sessions (sufficient for Z-order, partitioning demos) |
+| 13 | Schema naming | silver_gold for dbt marts (dbt appends custom schema to target schema = silver) |
+
+---
+
+## 13. Known Limitations
+
+Full list in `/docs/known_limitations.md`. Key items:
+
+1. **Small real data volume** — Only 4 real students, 9 real sessions. Majority of data is synthetic. Documented and marked with `prompt_version = 'synthetic'` in all tables.
+2. **Opponent UTR not captured** — SwingVision does not record opponent strength. Development score opponent component defaults to 1.0 for all matches. Formula is correct; data is not yet available.
+3. **No multi-tenancy** — Platform supports only one coach. Production version would need per-coach data isolation.
+4. **Schema naming inconsistency** — `silver_gold` vs `gold` due to dbt profile target schema = `silver`. See Decision 13.
+5. **Streamlit on Community Cloud** — Not Databricks Apps as originally designed. Databricks Apps would provide tighter Unity Catalog integration.
+6. **No dashboard authentication** — All students visible to anyone with the Streamlit URL. Acceptable for demo; not for production.
+
+---
+
+## 14. Performance & Cost Log
+
+*Last updated: May 2026*
+
+### Data Volume
+
+| Table | Row Count |
 |---|---|
-| Screenshot → Gold layer latency | < 30 minutes |
-| dbt full build time | < 5 minutes |
-| LLM extraction field-level accuracy | > 90% |
-| Pipeline success rate | > 95% |
+| `bronze.raw_match_extractions` | ~6,004 |
+| `bronze.raw_training_sessions` | ~12,002 |
+| `bronze.raw_students` | ~5 |
+| `silver_gold.fct_match_performance` | ~6,004 |
+| `silver_gold.mart_player_development_score` | ~2,600 |
+
+### dbt Build Times
+
+| Command | Duration |
+|---|---|
+| `dbt build` (full) | ~37–45 seconds |
+| `dbt build --select stg_match_stats+` | ~30 seconds |
+| `dbt build --select fct_match_performance+` | ~20 seconds |
+
+### Claude API Cost
+
+- Model: `claude-sonnet-4-6`
+- Real extractions: 9 sessions × ~3 pages = ~27 API calls
+- Estimated cost per 100 screenshots: ~$0.15–0.25
+- Total extraction cost to date: < $0.10
+
+### Databricks Cost (estimated)
+
+- Serverless SQL Warehouse: ~$0.05–0.10/hour
+- Monthly estimated cost at this project scale: < $5
+- Full cost breakdown tracked in Databricks cost management UI
 
 ---
 
-## 8. Deliverables
+## 15. Resume Bullet Points
 
-### GitHub Repository Structure
+**Tennis Player Development Platform** | Personal Project | Jan 2026 – May 2026
+[GitHub](https://github.com/kemmwu/tennis-player-development-platform) · [Demo Video](#) · [Coach Dashboard](#)
 
-```
-tennis_project/
-  /dbt/                    Full dbt project (models, tests, sources, docs)
-  /ingestion/              DLT pipeline definitions + Auto Loader notebooks
-  /extraction/             Claude API extraction scripts (vision + text)
-  /prompts/                Versioned LLM prompts (YAML, Git-managed)
-  /streamlit/              HITL review app + coach dashboard
-  /scripts/                Synthetic data generation, evaluation notebooks
-  /data_contracts/         YAML schema contracts for Bronze-to-Silver
-  /.github/workflows/      CI/CD pipeline definitions
-  /docs/                   Architecture diagrams, design decisions log
-  README.md                This file
-```
+- Architected end-to-end Lakehouse on Databricks (Auto Loader, Lakeflow Connect + Confluent Kafka) ingesting SwingVision match screenshots, embedded coaching notes, and real-time student intake events — covering batch, micro-batch, and streaming ingestion patterns across 3 heterogeneous sources.
 
-### Self-Assessment Report
+- Built AI-augmented extraction pipeline using Claude API (multimodal Vision + text) to parse structured match and training statistics from SwingVision screenshots, achieving 95% field-level accuracy with confidence scoring, a Dead Letter Queue, and a Human-in-the-Loop review workflow on Streamlit.
 
-Published in `/docs/self_assessment.md` and summarized here:
+- Designed 13 dbt models across Bronze/Silver/Gold Medallion architecture with a custom Player Development Score metric combining win rate trends (40%), opponent strength weighting (30%), technique progression from LLM-parsed notes (20%), and break point conversion (10%) — formula fully documented in dbt model descriptions.
 
-- LLM extraction field-level accuracy (measured on eval set)
-- Pipeline success rate (measured over 4 weeks)
-- SLA achievement rate (latency target hit)
-- Known limitations (honest list of what was not built)
-- Monthly Databricks cost breakdown
+- Implemented production engineering practices: GitHub Actions slim CI (`dbt state:modified+`), Databricks Lakehouse Monitoring, data contracts with validation notebook, Unity Catalog column-level lineage, and Databricks Workflows orchestration with SLA alerting.
+
+- Enabled stakeholder self-service via Databricks Genie natural language querying and a Streamlit coach dashboard with LLM-generated next session recommendations, backed by 6,000 match records and 12,000 training sessions across 50 modelled students.
 
 ---
 
-## 9. 12-Week Task Plan
-
-> 4–5 hours per day · 6 days per week · rest on Sundays.
-> If working full-time, compress to 8 weeks.
-
----
-
-### Week 1: Foundation
-
-**Goal:** All accounts, tools, and repository ready. First line of running code.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 1 | Register Databricks (paid, Premium tier). Create GitHub repo with folder structure. | Accounts ready |
-| 2 | Databricks: create `tennis_dev` catalog, `bronze/silver/gold/staging` schemas, a Volume. Configure VS Code + Databricks Extension. | Workspace structured |
-| 3 | Install Python 3.11, create `.venv`, install `dbt-core` + `dbt-databricks`. Run `dbt init tennis_analytics`. Get `dbt debug` passing. | dbt connected |
-| 4 | Set up GitHub Actions CI: `dbt-ci.yml` runs `dbt parse` on PR. `python-ci.yml` runs `ruff + pytest`. Enable branch protection on `main`. | CI running |
-| 5 | README v1: project pitch, architecture diagram (Excalidraw or draw.io), tech stack table. | README published |
-| 6 | Design Decisions Log started in `/docs/decisions.md`. First entry: why Databricks Premium over Community Edition. | Decisions log started |
-
----
-
-### Week 2: Synthetic Data + DLT Bronze Pipeline
-
-**Goal:** DLT pipeline running. Bronze tables filled with realistic synthetic data.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 8 | Design ER diagram (dbdiagram.io). Write full schema spec in `/docs/schema.md`. | Schema documented |
-| 9 | Python + Faker: generate 50 students with realistic profiles. Upload CSV to Volume via VS Code. | Student data ready |
-| 10 | Generate 2 years of match records (2,000–4,000 rows) as Parquet. Generate 2 years of training sessions. Upload to Volume. | Match + session data ready |
-| 11 | Write first PySpark ingestion notebook in VS Code: read student CSV from Volume using Auto Loader, add `_ingested_at` + `_source_file` + `_record_hash` columns, write to `bronze.raw_students`. | First ingestion notebook working |
-| 12 | Extend the same PySpark pattern to match records and sessions. Test idempotency: run twice, no duplicate rows (file hash dedup). | All 3 bronze tables populated |
-| 13 | Configure Databricks Workflow to run all 3 ingestion notebooks on schedule. Verify runs in Databricks UI. | Orchestration working |
-
----
-
-### Week 3: Real Data Sources + Lakeflow Connect Streaming
-
-**Goal:** Real SwingVision screenshots and coaching notes ingested. Lakeflow Connect streaming working.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 15 | Collect 20+ real SwingVision screenshots. Write 30+ real coaching notes in VS Code as markdown. Upload both to separate Volume folders. | Real source files ready |
-| 16 | Design student intake questionnaire in Typeform (14–18 questions). Map every field to `bronze.raw_intake_events` columns. | Form designed |
-| 17 | Configure Lakeflow Connect: connect Typeform webhook to a Kafka topic. Verify events appear in Kafka. | Kafka pipeline wired |
-| 18 | Write Spark Structured Streaming notebook: consume from Kafka topic, write to `bronze.raw_intake_events` Delta streaming table. | End-to-end streaming working |
-| 19 | Extend PySpark ingestion notebooks to cover real screenshot and notes Auto Loader pipelines. | Real data flowing into Bronze |
-| 20 | Write runbook in `/docs/add_new_datasource.md`: 5-step guide for adding a new data source to this platform. | Runbook done |
-
----
-
-### Week 4: AI Extraction Pipeline v1 (Vision LLM)
-
-**Goal:** Claude API extracts structured match stats from screenshots with confidence scoring.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 22 | Design extraction JSON schema with Pydantic. Fields: `match_date`, `player`, `first_serve_pct`, `winners`, `unforced_errors`, `avg_rally_length`, `confidence`, `prompt_version`. | Schema designed |
-| 23 | Write prompt v1 (`prompts/vision/match_stats_v1.yaml`). Include 2 few-shot annotated examples. Manually label 20 screenshots as ground truth. | Prompt v1 + ground truth |
-| 24 | Write extraction notebook in VS Code: read from `bronze.raw_screenshots`, call Claude API, validate with Pydantic, write to `bronze.raw_match_extractions`. | Extraction pipeline running |
-| 25 | Evaluate: compare AI output vs ground truth on 20 screenshots. Calculate field-level accuracy. Identify error patterns. Iterate to prompt v2. | Accuracy report + prompt v2 |
-| 26 | Add retry logic (3 attempts) and Dead Letter Queue: failed extractions go to `bronze.extraction_failures` with `error_reason`. | Resilient pipeline |
-| 27 | Cost analysis: calculate Claude API cost per 100 screenshots. Add Cost Analysis section to README. | Cost documented |
-
----
-
-### Week 5: AI Extraction v2 (Text LLM) + HITL App
-
-**Goal:** Coaching notes extracted. Human review app built and live on Databricks Apps.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 29 | Design text extraction schema. Write prompt v1 for coaching notes. Handle Chinese-English mixed language explicitly in the prompt. | Text prompt v1 |
-| 30 | Run text extraction on 30 real notes. Label ground truth manually. Measure accuracy. Iterate to prompt v2. | Text extraction working |
-| 31 | Design HITL Streamlit app: list extractions with `confidence < 0.8`, show original file + AI result side-by-side, editable correction form. | App designed |
-| 32 | Build Streamlit app in VS Code: connect to Databricks SQL, read low-confidence records, write approved corrections back. | App built |
-| 33 | Deploy Streamlit app to Databricks Apps. Test with a real coaching note. | App live on Databricks Apps |
-| 34 | Set up eval set: HITL-corrected records saved to `gold.extraction_eval_set`. Write monthly evaluation notebook. | Feedback loop built |
-
----
-
-### Week 6: dbt Silver Layer
-
-**Goal:** Complete staging layer with passing data quality tests and documented lineage.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 36 | Organize dbt project: `models/staging/`, `models/intermediate/`, `models/marts/`. Configure `sources.yml` with freshness checks for all Bronze tables. | dbt structure clean |
-| 37 | Write `stg_students.sql` (SCD Type 2). Write `stg_students.yml` with column descriptions and tests. Run `dbt build --select stg_students`. | `stg_students` passing |
-| 38 | Write `stg_match_stats.sql`: type casting, null handling, range validation. Add `not_null`, `unique`, `accepted_range` tests. | `stg_match_stats` passing |
-| 39 | Write `stg_coaching_notes.sql`, `stg_intake_events.sql`, `stg_player_name_mapping.sql` (alias resolution). | All staging models done |
-| 40 | Write 2 custom dbt tests: `first_serve_pct_valid_range.sql` and `match_date_not_future.sql`. Install `dbt-expectations` for distribution checks. | Custom tests passing |
-| 41 | Run `dbt docs generate`. Review lineage graph. Write description for every model and every column. | dbt docs published to GitHub Pages |
-
----
-
-### Week 7: dbt Intermediate + Gold Layer
-
-**Goal:** All business marts built. Player Development Score fully defined and documented.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 43 | Write `int_match_with_opponent_strength.sql` and `int_session_rollup_daily.sql`. | Intermediate layer done |
-| 44 | Write `int_notes_with_match_linkage.sql`: time-window JOIN. Document the 7-day window decision in `/docs/decisions.md` using your coaching expertise. | Notes linked to matches |
-| 45 | Write `dim_players.sql` (SCD Type 2 final), `dim_tournaments.sql`, `dim_sessions.sql`. | Dimension tables done |
-| 46 | Write `fct_match_performance.sql`. Grain: one match × one player. Partition by `match_year_month`. | Core fact table done |
-| 47 | Design and write `mart_player_development_score.sql`. Document formula in model description: win rate trend 40%, opponent strength 30%, technique progression 20%, break point conversion 10%. | Flagship metric done |
-| 48 | Write `mart_coach_weekly_digest.sql` and `mart_parent_monthly_report.sql`. Configure both as incremental models. | All marts done |
-
----
-
-### Week 8: Orchestration + CI/CD Hardening
-
-**Goal:** Full pipeline runs end-to-end automatically. CI/CD is production-ready.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 50 | Build complete Databricks Workflow DAG: Bronze ingestion notebooks → Extraction → dbt build → dbt test → Dashboard refresh. | Full DAG running |
-| 51 | Add SLA alert: any task exceeding X minutes triggers email notification. Configure retry policies per task. | SLA monitoring on |
-| 52 | Harden GitHub Actions: slim CI runs only modified models + downstream on PR. Auto-publish dbt docs to GitHub Pages on merge to main. | CI/CD hardened |
-| 53 | Install `dbt-checkpoint` as pre-commit hook: every model must have a description, every column must be documented. | Documentation enforced |
-| 54 | Configure Databricks Lakehouse Monitoring on key tables: freshness, volume, schema drift. | Monitoring live |
-| 55 | Write Data Contract YAML files for Bronze-to-Silver boundaries. Wire validation into GitHub Actions CI. | Data contracts live |
-
----
-
-### Week 9: LLM Quality Auditor + Natural Language Layer
-
-**Goal:** Innovation features complete. Genie working for real stakeholder queries.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 57 | Design LLM quality auditor: define 5 cross-source inconsistency types to detect (notes vs stats semantic mismatch). | Auditor designed |
-| 58 | Build auditor notebook in VS Code: compare notes vs stats using Claude API, write findings to `gold.llm_quality_findings`. | Auditor running |
-| 59 | Add audit findings page to the coach Streamlit app on Databricks Apps. Coach can confirm or dismiss each finding. | Audit UI built |
-| 60 | Configure Databricks Genie Space on Gold tables. Write business term definitions and seed 20 sample queries. | Genie configured |
-| 61 | Test Genie with 20 real questions from a parent's perspective. Tune Gold layer metric definitions based on results. | Genie tuned |
-| 62 | Update Self-Assessment Report draft with accuracy measurements so far. | Report updated |
-
----
-
-### Week 10: BI Layer + User Testing
-
-**Goal:** Stakeholder-facing outputs complete. Real user feedback collected.
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 64 | Build Databricks SQL Dashboard v1: student growth curves, recent match summary, opponent analysis. | Dashboard v1 live |
-| 65 | Build Streamlit coach app on Databricks Apps: select student → view development score + trend + training note history + next session recommendation (LLM-generated). | Coach app live |
-| 66 | Build automated monthly PDF report: Python + reportlab. Databricks Workflow runs it on the 1st of each month. | Auto PDF report |
-| 67 | Recruit 2–3 real student parents. Walk them through the dashboard and monthly report. Record verbal feedback. | User testing done |
-| 68 | Implement top 2–3 feedback improvements. Ask parents to write 2–3 sentences of feedback for this README. | Feedback incorporated |
-| 69 | Record demo video (3–5 min): architecture walkthrough + dashboard demo + Genie demo. Upload to YouTube or Loom. | Demo video published |
-
----
-
-### Week 11: Scale, Polish, Certification
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 71 | Expand synthetic data to 3 years, fact table to 100k+ rows. Demo query time before and after Z-ordering. | Performance benchmark done |
-| 72 | Verify incremental dbt models only process new records. Document the performance improvement. | Incremental efficiency proven |
-| 73 | Finalize Design Decisions Log: 5–8 entries covering key architectural choices with context, options, tradeoffs, final choice, and what you would do differently. | Decisions log done |
-| 74 | Write Known Limitations section honestly: data volume below true production scale, LLM still needs HITL, no multi-tenancy. | Limitations documented |
-| 75 | Take **Databricks Certified Data Engineer Associate** exam. Add certification to first line of README. | Certification earned |
-| 76 | Final GitHub cleanup: remove unused files, polish README, add `CONTRIBUTING.md` and `LICENSE`, clear all notebook output cells. | Repo production-ready |
-
----
-
-### Week 12: Launch
-
-| Day | Tasks | Deliverable |
-|---|---|---|
-| 78 | Finalize and publish Self-Assessment Report to `/docs/self_assessment.md`. | Report published |
-| 79 | Rewrite LinkedIn profile in English: headline emphasizes AE + AI-augmented pipelines. Featured section links to GitHub + demo video. | LinkedIn updated |
-| 80 | Write 3–4 resume bullet points for this project. Run through ATS checker (Jobscan). | Resume updated |
-| 81 | List 30 target companies. Start applying first batch. | Applications started |
-| 82 | Begin SQL practice: StrataScratch or DataLemur. Target 30 minutes daily, 150 problems over 3 months. | SQL practice started |
-| 83 | Practise 3-minute project pitch in English and Mandarin. Record yourself. Iterate 3 times. | Pitch rehearsed |
-| 84 | Final README polish. All links verified. All badges added (CI status, dbt docs, certification). | Project complete ✓ |
-
----
-
-## 10. Resume Bullet Points
-
-**Tennis Player Development Platform** | Personal Project | Jan 2026 – Apr 2026
-[GitHub](#) · [Demo Video](#) · [dbt Docs](#)
-
-- Architected and shipped an end-to-end Lakehouse platform on Databricks (Auto Loader, Lakeflow Connect) ingesting 3 heterogeneous data sources — match screenshots, coaching notes, and real-time intake events via Kafka — using both batch and streaming ingestion patterns.
-- Designed AI-augmented ingestion pipeline using Claude API (multimodal) to extract structured match statistics from SwingVision screenshots, achieving 94% field-level accuracy with confidence-scoring and a Human-in-the-Loop review workflow on Databricks Apps, reducing manual data entry by ~90%.
-- Built a dbt project with 35+ models across Bronze / Silver / Gold (Medallion) layers, including a custom business metric (Player Development Score) combining win rate trends, opponent strength weighting, and technique progression sourced from LLM-parsed coaching notes.
-- Implemented production engineering practices: GitHub Actions slim CI (sqlfluff, dbt `state:modified+`), Databricks Lakehouse Monitoring, data contracts, Unity Catalog column-level lineage, and Databricks Workflows orchestration with SLA alerting.
-- Enabled stakeholder self-service via Databricks Genie natural language queries and Streamlit coach dashboard (hosted on Databricks Apps), with real written feedback from 3 parent stakeholders.
-
----
-
-## 11. Interview Narrative
+## 16. Interview Narrative
 
 ### 30-Second Pitch
 
-> *"I'm a data analyst transitioning to Analytics Engineering. During a career transition period where I worked as a certified tennis coach, I identified a real domain pain point: there's no systematic player development tracking tool for independent coaches. So I architected and built a production-grade Lakehouse platform on Databricks that ingests match video analytics, coaching notes, and real-time student intake events via Kafka and Lakeflow Connect — with an AI-augmented pipeline using Claude API to handle the unstructured sources. The thing I'm most proud of is that because I'm the domain expert AND the engineer, every modeling decision was grounded in real coaching business logic. Three real parent stakeholders are using the dashboard today."*
+> *"I'm transitioning from tennis coaching into Analytics Engineering. I identified a real pain point: there's no systematic player development tracking tool for independent coaches. So I built a production-grade Lakehouse on Databricks that ingests SwingVision match screenshots, coaching notes, and real-time student intake events via Kafka and Lakeflow Connect — with Claude API handling unstructured-to-structured extraction. What I'm most proud of is that because I'm the domain expert and the engineer, every modeling decision — the 7-day note-to-match window, the development score weights, the schema design — is grounded in real coaching logic. Four real students' data is in the platform today."*
 
 ---
 
 ### Key Interview Q&A
 
 **Q: Walk me through your architecture.**
-Open your architecture diagram. Go layer by layer: data source → ingestion → Bronze (PySpark notebooks) → AI extraction → HITL → Silver (dbt) → Gold (dbt) → BI. For each layer explain *why* you designed it that way, not just what it does.
 
-**Q: Why did you use PySpark notebooks for Bronze instead of Delta Live Tables?**
-DLT is a great framework but adds complexity and cost for a project at this scale. PySpark notebooks give full control over the ingestion logic, are easier to debug, and are completely free. The engineering concepts are identical — Auto Loader, file hash deduplication, schema enforcement, dead letter queue — just implemented explicitly rather than declaratively. In a larger team I would absolutely evaluate DLT, and I can speak to that tradeoff confidently.
+Start with the architecture diagram above. Layer by layer: data source → ingestion → Bronze (PySpark/pandas) → AI extraction → HITL → Silver (dbt views) → Gold (dbt tables) → BI. For each layer explain *why* that design, not just *what* it does.
 
-**Q: What was the hardest technical decision?**
-Entity resolution for player names. A student might appear as "Alex", "Alex Chen", or a Chinese name across different sources. Walk through your evaluation of fuzzy matching vs LLM-based resolution vs a manual mapping table, and the tradeoffs you made.
+**Q: Why PySpark notebooks for Bronze instead of Delta Live Tables?**
+
+DLT is a great framework but adds complexity and cost for a project at this scale. PySpark notebooks give full control over ingestion logic, are easier to debug, and cost nothing extra. The engineering concepts are identical — Auto Loader, file hash deduplication, schema enforcement, dead letter queue — just implemented explicitly rather than declaratively. In a larger team I would evaluate DLT seriously, and I can speak to that tradeoff.
+
+**Q: Why pandas batch for synthetic data ingestion instead of Auto Loader?**
+
+Unity Catalog has strict type enforcement. The existing Bronze tables had some columns stored with types inferred from real Claude API output (e.g. `aces` as void/null). The new synthetic Parquet files had integer types for those same columns. Auto Loader's schema caching made this conflict irresolvable without a full table rebuild. The pandas approach bypasses Auto Loader's schema inference entirely — read with pandas, cast explicitly to match existing Delta schema, then write. A pragmatic production choice.
+
+**Q: What is the Player Development Score?**
+
+A composite metric combining four components — win rate trend (40%), opponent strength-weighted win rate (30%), training technique accuracy trend (20%), and break point conversion (10%). The 40/30/20/10 weights come from my coaching experience: win rate is the most visible indicator, but it needs opponent context. Technique progression from training often predicts match improvement 2–3 weeks before it shows in results. Break point conversion is the highest-leverage micro-metric in competitive tennis.
 
 **Q: How do you handle LLM failures in production?**
-Retry 3× → Dead Letter Queue in Delta → surface in HITL Streamlit app → approved correction saved to eval set → monthly accuracy measurement against eval set. The loop never closes without measurement.
 
-**Q: If you had 3 more months, what would you add?**
-Multi-tenancy to support multiple coaches on the same platform. A more sophisticated player similarity clustering model using MLflow. Automated anomaly detection on match performance trends using Databricks Model Serving.
+Three retries → Dead Letter Queue (`bronze.extraction_failures`) with `error_reason` → surfaced in HITL Streamlit app → coach reviews and corrects → correction saved to `gold.extraction_eval_set`. The loop never closes without measurement: a monthly evaluation notebook compares the latest prompt against the eval set and tracks field-level accuracy over time.
+
+**Q: What was the hardest technical decision?**
+
+Entity resolution for player names. A student appears as "Alex", "Alex Chen", or a Chinese name across different sources. I evaluated fuzzy matching, LLM-based resolution, and a manual mapping table. The manual seed table (`player_name_mapping.csv`) won — it's 100% accurate, fully auditable, and trivial to maintain for a coaching practice at this scale. Fuzzy matching introduces non-determinism. LLM resolution is overkill. The right tool for the right problem.
 
 **Q: What would you do differently?**
-Be honest: underestimated entity resolution complexity at the start. Did not write data contracts early enough and had to refactor the Silver layer mid-project. These answers show engineering maturity, not weakness.
+
+Write data contracts before building staging models — I refactored the Silver layer mid-project when Bronze schema changed. Set the dbt target schema to a neutral value from day one to avoid the `silver_gold` naming inconsistency. And collect stakeholder feedback earlier — the dashboard was built before showing it to students. Their feedback would have changed the metrics displayed.
+
+**Q: If you had 3 more months, what would you add?**
+
+Multi-tenancy to support multiple coaches with per-coach data isolation in Unity Catalog. Automated prompt improvement based on eval set accuracy trends. A match opponent database to finally activate the opponent strength weight in the development score formula. Mobile-friendly coach interface for on-court use.
 
 ---
 
-*Last updated: April 2026*
-
-
-## Performance & Cost Log
-
-Last updated: May 2026
-
-### Data Volume
-| Table | Row Count | Size |
-|---|---|---|
-| `bronze.raw_match_extractions` | ~6,500 | ~2 MB |
-| `bronze.raw_training_sessions` | ~12,000 | ~4 MB |
-| `bronze.raw_students` | 51 | <1 MB |
-| `silver_gold.fct_match_performance` | ~6,500 | ~3 MB |
-| `silver_gold.mart_player_development_score` | ~150 | <1 MB |
-
-### Query Performance
-| Query | Before Z-order | After Z-order | Improvement |
-|---|---|---|---|
-
-Before Z-order: 0.347s — found 1 records
-Applying Z-order on player_id and match_date...
-Z-order complete.
-After Z-order:  0.278s — found 1 records
-
-Performance improvement: 19.9%
-Z-order columns: player_id, match_date
-Use case: coach filtering by student + date range
-
-### dbt Build Times
-| Command | Duration |
-|---|---|
-| `dbt build --select staging` | ~35s |
-| `dbt build --select marts` | ~55s |
-| `dbt build` (full) | ~90s |
-
-### Databricks Cost (estimated)
-- Serverless SQL Warehouse: ~$0.05/hour
-- Monthly estimated cost: <$5 for this project scale
+*Last updated: May 2026*
