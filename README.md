@@ -750,7 +750,9 @@ Full list in `/docs/known_limitations.md`. Key items:
 
 ### 30-Second Pitch
 
-> *"I'm transitioning from tennis coaching into Analytics Engineering. I identified a real pain point: there's no systematic player development tracking tool for independent coaches. So I built a production-grade Lakehouse on Databricks that ingests SwingVision match screenshots, coaching notes, and real-time student intake events via Kafka and Lakeflow Connect — with Claude API handling unstructured-to-structured extraction. What I'm most proud of is that because I'm the domain expert and the engineer, every modeling decision — the 7-day note-to-match window, the development score weights, the schema design — is grounded in real coaching logic. Four real students' data is in the platform today."*
+> *"I'm a certified tennis coach — my students have won the Virginia State Championship — and I'm transitioning into Analytics Engineering. I identified a real pain point in my own coaching practice: there's no systematic way to track player development over time. Match stats live in SwingVision screenshots, coaching observations live in notes, and student intake data lives in forms — none of it connected, none of it queryable.
+So I built a production-grade Lakehouse on Databricks that ingests all three sources — using Claude API to extract structured statistics from the unstructured screenshots, Lakeflow Connect and Kafka for real-time intake streaming, and a full dbt Medallion architecture to transform everything into a Player Development Score and a coach dashboard with LLM-generated session recommendations.
+What I'm most proud of is that because I'm the domain expert and the engineer, every modeling decision is grounded in real coaching logic — the development score weights, the 7-day note-to-match linkage window, the alias resolution for player names. Four real students' data is in the platform today."*
 
 ---
 

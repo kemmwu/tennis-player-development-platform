@@ -40,7 +40,8 @@ jobs:
                 host: ${{ secrets.DATABRICKS_HOST }}
                 http_path: ${{ secrets.DATABRICKS_HTTP_PATH }}
                 token: ${{ secrets.DATABRICKS_TOKEN }}
-                schema: dev
+                catalog: tennis_dev
+                schema: silver
                 threads: 4
           EOF
 
