@@ -1,0 +1,10 @@
+tennis_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: databricks
+      host: https://your-workspace.cloud.databricks.com
+      http_path: /sql/1.0/warehouses/your-warehouse-id
+      token:
+      schema: silver
+      threads: 4
