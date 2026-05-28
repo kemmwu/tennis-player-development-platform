@@ -8,7 +8,7 @@
 
 **Target roles:** Analytics Engineer · Data Engineer · AI Engineer (data platform track)
 
-**[Coach Dashboard](#)** · **[Demo Video](#)** · **[dbt Docs](#)**
+**[Coach Dashboard](https://tennis-player-development-platform-rvgsojwbcmybstkqcdnbjz.streamlit.app/)** · **[dbt Docs](#)**
 
 ---
 
