@@ -150,12 +150,20 @@ if not scores_df.empty:
 
     m1, m2, m3, m4 = st.columns(4)
     score_change = latest.get("score_change")
-    m1.metric(
-        "Development Score",
-        f"{latest['development_score']:.1f}",
-        delta=f"{score_change:+.1f}" if pd.notna(score_change) else trend,
-        delta_color="normal"
-    )
+    if pd.notna(score_change) and score_change is not None:
+        m1.metric(
+            "Development Score",
+            f"{latest['development_score']:.1f}",
+            delta=round(float(score_change), 1),
+            delta_color="normal"
+        )
+    else:
+        m1.metric(
+            "Development Score",
+            f"{latest['development_score']:.1f}",
+            delta=trend,
+            delta_color="inverse" if trend == "declining" else "normal"
+        )
     m2.metric(
         "Matches This Week",
         int(latest["matches_played"])
