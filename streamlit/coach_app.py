@@ -149,10 +149,12 @@ if not scores_df.empty:
         else "📉" if trend == "declining" else "➡️"
 
     m1, m2, m3, m4 = st.columns(4)
+    score_change = latest.get("score_change")
     m1.metric(
         "Development Score",
         f"{latest['development_score']:.1f}",
-        f"{trend_icon} {trend}"
+        delta=f"{score_change:+.1f}" if pd.notna(score_change) else trend,
+        delta_color="normal"
     )
     m2.metric(
         "Matches This Week",
